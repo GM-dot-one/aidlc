@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City List</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>City List</h1>
+    <p class="subtitle">Major cities worldwide — search, sort, and browse.</p>
+
+    <div class="controls">
+      <input
+        type="search"
+        id="search"
+        class="search-input"
+        placeholder="Search by city or country…"
+        aria-label="Search cities"
+      >
+      <select id="sort" class="sort-select" aria-label="Sort cities">
+        <option value="name">Sort by name</option>
+        <option value="country">Sort by country</option>
+        <option value="population">Sort by population</option>
+      </select>
+    </div>
+
+    <p id="city-count" class="city-count"></p>
+    <div id="city-list" class="city-list"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

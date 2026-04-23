@@ -1,4 +1,4 @@
-.PHONY: help install dev up down logs seed test lint typecheck check clean compose-config
+.PHONY: help install dev up down logs seed test lint typecheck check clean compose-config serve-frontend
 
 PY ?= python3
 PIP ?= $(PY) -m pip
@@ -42,6 +42,9 @@ check: lint typecheck test ## Run all checks
 
 compose-config: ## Validate docker-compose.yml
 	docker compose config --quiet && echo "docker-compose.yml OK"
+
+serve-frontend: ## Serve the city-list frontend on localhost:8000
+	$(PY) -m http.server 8000 --directory frontend
 
 clean: ## Remove caches and build artifacts
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist *.egg-info

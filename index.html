@@ -517,6 +517,60 @@
     .extra-grid .detail-card:last-child { grid-column: span 2; }
     .forecast-row { grid-template-columns: 1fr; }
   }
+
+  /* ── Search loading indicator ────────────────────────────────── */
+  .search-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+    display: none;
+  }
+
+  .search-spinner.visible { display: block; }
+
+  /* ── Dropdown empty/error states ─────────────────────────────── */
+  .city-dropdown-empty {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* ── State fade-in transitions ───────────────────────────────── */
+  .state.active {
+    animation: stateFadeIn 0.18s ease-out;
+  }
+
+  @keyframes stateFadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Footer ──────────────────────────────────────────────────── */
+  footer {
+    text-align: center;
+    padding: 16px 24px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+    margin-top: auto;
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  footer a:hover { text-decoration: underline; }
+
+  /* ── Error type icon variants ────────────────────────────────── */
+  .error-icon { transition: none; }
 </style>
 </head>
 <body>
@@ -546,6 +600,7 @@
           <circle cx="11" cy="11" r="8"/>
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
+        <span class="search-spinner" id="search-spinner" aria-hidden="true"></span>
         <input
           type="search"
           id="city-input"
@@ -603,6 +658,12 @@
     <!-- populated by renderWeatherData() -->
   </div>
 </main>
+
+<footer>
+  Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+  &nbsp;&middot;&nbsp;
+  City search by <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noopener noreferrer">Open-Meteo Geocoding</a>
+</footer>
 
 <script>
 (function () {
@@ -702,6 +763,36 @@
     };
   }
 
+  /* ─── Network helpers ───────────────────────────────────────── */
+  function isOnline() {
+    return typeof navigator.onLine === "undefined" || navigator.onLine;
+  }
+
+  function classifyFetchError(err, status) {
+    if (!isOnline()) {
+      return { type: "network", message: "No internet connection. Please check your network and try again." };
+    }
+    if (err && err.name === "AbortError") {
+      return { type: "timeout", message: "Request timed out. Please check your connection and try again." };
+    }
+    if (status === 429) {
+      return { type: "rate-limit", message: "Too many requests. Please wait a moment and try again." };
+    }
+    if (status >= 500) {
+      return { type: "server", message: "Weather service is temporarily unavailable. Please try again later." };
+    }
+    if (err && err.message) {
+      return { type: "unknown", message: err.message };
+    }
+    return { type: "unknown", message: "Unable to fetch weather data. Please try again." };
+  }
+
+  /* ─── Search spinner ─────────────────────────────────────────── */
+  function setSearchSpinner(visible) {
+    var el = document.getElementById("search-spinner");
+    if (el) el.classList.toggle("visible", !!visible);
+  }
+
   /* ─── localStorage history ──────────────────────────────────── */
   function loadHistory() {
     try {
@@ -780,6 +871,12 @@
 
   /* ─── Open-Meteo Weather API ────────────────────────────────── */
   async function fetchWeatherByCoords(lat, lon) {
+    if (!isOnline()) {
+      var offlineErr = new Error("No internet connection. Please check your network and try again.");
+      offlineErr.errorType = "network";
+      throw offlineErr;
+    }
+
     var url = "https://api.open-meteo.com/v1/forecast" +
       "?latitude=" + lat + "&longitude=" + lon +
       "&current=temperature_2m,apparent_temperature,relative_humidity_2m," +
@@ -794,15 +891,19 @@
       var response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (!response.ok) {
-        throw new Error("Weather data unavailable (HTTP " + response.status + ").");
+        var classified = classifyFetchError(null, response.status);
+        var httpErr = new Error(classified.message);
+        httpErr.errorType = classified.type;
+        throw httpErr;
       }
       return await response.json();
     } catch (err) {
       clearTimeout(timeoutId);
-      if (err.name === "AbortError") {
-        throw new Error("Request timed out. Please check your connection and try again.");
-      }
-      throw err;
+      if (err.errorType) throw err;
+      var info = classifyFetchError(err, null);
+      var wrappedErr = new Error(info.message);
+      wrappedErr.errorType = info.type;
+      throw wrappedErr;
     }
   }
 
@@ -853,8 +954,16 @@
   function hideDropdown() {
     var dropdown = document.getElementById("city-dropdown");
     dropdown.hidden = true;
+    dropdown.innerHTML = "";
     currentSuggestions = [];
     highlightedIndex = -1;
+  }
+
+  function showEmptyDropdown(query) {
+    var dropdown = document.getElementById("city-dropdown");
+    dropdown.innerHTML = '<div class="city-dropdown-empty">No cities found for "' +
+      escapeHtml(query) + '"</div>';
+    dropdown.hidden = false;
   }
 
   function setHighlight(idx) {
@@ -870,6 +979,7 @@
     query = query.trim();
     if (query.length < 2) {
       hideDropdown();
+      setSearchSpinner(false);
       return;
     }
 
@@ -879,6 +989,8 @@
     geocodeAbort = new AbortController();
     var signal = geocodeAbort.signal;
 
+    setSearchSpinner(true);
+
     try {
       var suggestions = await fetchCitySuggestions(query, signal);
       if (signal.aborted) return;
@@ -887,10 +999,12 @@
       if (suggestions.length) {
         showDropdown(suggestions);
       } else {
-        hideDropdown();
+        showEmptyDropdown(query);
       }
     } catch (e) {
       if (e.name !== "AbortError") hideDropdown();
+    } finally {
+      if (!signal.aborted) setSearchSpinner(false);
     }
   }, 300);
 
@@ -1025,8 +1139,20 @@
     });
   }
 
-  function showError(msg) {
-    document.getElementById("error-message").textContent = msg;
+  var ERROR_ICONS = {
+    "network":    "📡",
+    "timeout":    "⏱️",
+    "rate-limit": "🚦",
+    "server":     "🔧",
+    "notfound":   "🔍",
+    "unknown":    "⚠️"
+  };
+
+  function showError(msg, type) {
+    document.getElementById("error-message").textContent = msg ||
+      "Unable to fetch weather data. Please try again.";
+    document.querySelector(".error-icon").textContent =
+      ERROR_ICONS[type] || "⚠️";
     showState("error-state");
   }
 
@@ -1046,7 +1172,8 @@
       showState("weather-state");
     } catch (err) {
       var msg = (err && err.message) || "Unable to fetch weather data. Please try again.";
-      showError(msg);
+      var type = (err && err.errorType) || "unknown";
+      showError(msg, type);
     } finally {
       document.getElementById("search-btn").disabled = false;
     }
@@ -1081,7 +1208,9 @@
     try {
       var suggestions = await fetchCitySuggestions(query, null);
       if (!suggestions.length) {
-        throw new Error('City "' + query + '" not found. Check the spelling and try again.');
+        var nfErr = new Error('No city found for "' + query + '". Check the spelling and try again.');
+        nfErr.errorType = "notfound";
+        throw nfErr;
       }
       var cityInfo = buildCityInfo(suggestions[0]);
       document.getElementById("city-input").value = cityInfo.displayName;
@@ -1090,7 +1219,8 @@
       handleSearchByCity(cityInfo);
     } catch (err) {
       var msg = (err && err.message) || "City not found. Please try again.";
-      showError(msg);
+      var type = (err && err.errorType) || "unknown";
+      showError(msg, type);
       document.getElementById("search-btn").disabled = false;
     }
   }
@@ -1110,6 +1240,10 @@
   });
 
   document.getElementById("city-input").addEventListener("input", function (e) {
+    if (e.target.value.trim().length < 2) {
+      setSearchSpinner(false);
+      hideDropdown();
+    }
     debouncedFetch(e.target.value);
   });
 
@@ -1168,6 +1302,20 @@
   document.getElementById("retry-btn").addEventListener("click", function () {
     if (lastCity) handleSearchByCity(lastCity);
     else showState("welcome-state");
+  });
+
+  /* ─── Offline / online events ───────────────────────────────── */
+  window.addEventListener("offline", function () {
+    var loadingEl = document.getElementById("loading-state");
+    if (loadingEl && loadingEl.classList.contains("active")) {
+      showError(
+        "No internet connection. Please check your network and try again.",
+        "network"
+      );
+      document.getElementById("search-btn").disabled = false;
+    }
+    setSearchSpinner(false);
+    hideDropdown();
   });
 
   /* ─── Init ──────────────────────────────────────────────────── */

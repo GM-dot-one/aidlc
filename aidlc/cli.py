@@ -1,0 +1,223 @@
+"""Typer-based CLI — the operator interface for the AI-DLC agent.
+
+Commands roughly mirror the workflow stages:
+    aidlc spec <wp-id>
+    aidlc decompose <wp-id>
+    aidlc code <wp-id>
+    aidlc watch
+    aidlc run-all <wp-id>          # chain the three authoring stages
+    aidlc doctor                   # sanity-check configuration
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Annotated
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from aidlc.config import get_settings
+from aidlc.git_host import GitHubClient
+from aidlc.llm import get_llm
+from aidlc.logging import get_logger
+from aidlc.openproject import OpenProjectClient
+from aidlc.workflows import (
+    run_idea_to_spec,
+    run_spec_to_tasks,
+    run_status_updates,
+    run_task_to_code,
+)
+
+app = typer.Typer(
+    no_args_is_help=True,
+    add_completion=False,
+    help="AI-DLC agent — drives a feature through spec, decomposition, code, and status updates.",
+)
+log = get_logger(__name__)
+console = Console()
+
+
+def _op_client() -> OpenProjectClient:
+    s = get_settings()
+    return OpenProjectClient(
+        base_url=s.openproject_url,
+        api_key=s.openproject_api_key.get_secret_value(),
+    )
+
+
+def _gh_client() -> GitHubClient:
+    s = get_settings()
+    token, repo = s.require_github()
+    return GitHubClient(token=token.get_secret_value(), repo=repo)
+
+
+@app.command()
+def spec(
+    wp_id: Annotated[int, typer.Argument(help="Work package ID to spec")],
+    force: Annotated[bool, typer.Option("--force", help="Re-run even if already done")] = False,
+) -> None:
+    """Stage 1 — draft a spec from a raw idea work package."""
+    llm = get_llm()
+    with _op_client() as op:
+        result = run_idea_to_spec(llm=llm, op=op, work_package_id=wp_id, force=force)
+    console.print(
+        f"[green]✓ Spec written to WP #{result.work_package_id}[/] "
+        f"(status → {result.transitioned_to or '—'})"
+    )
+
+
+@app.command()
+def decompose(
+    wp_id: Annotated[int, typer.Argument(help="Parent (spec'd) work package to decompose")],
+    force: Annotated[bool, typer.Option("--force")] = False,
+) -> None:
+    """Stage 2 — decompose a spec into child tasks."""
+    s = get_settings()
+    llm = get_llm()
+    with _op_client() as op:
+        result = run_spec_to_tasks(
+            llm=llm,
+            op=op,
+            parent_work_package_id=wp_id,
+            project_identifier=s.openproject_project,
+            force=force,
+        )
+    console.print(
+        f"[green]✓ Created {len(result.created_task_ids)} child tasks[/] "
+        f"under WP #{result.parent_work_package_id}: {result.created_task_ids}"
+    )
+
+
+@app.command()
+def code(
+    wp_id: Annotated[int, typer.Argument(help="Task work package to implement")],
+    hints: Annotated[
+        str,
+        typer.Option(help="Stack hints for the LLM, e.g. 'Ruby on Rails + RSpec'"),
+    ] = "Python / FastAPI / pytest (adjust if your repo differs)",
+    force: Annotated[bool, typer.Option("--force")] = False,
+) -> None:
+    """Stage 3 — generate a scaffold PR for a task."""
+    s = get_settings()
+    llm = get_llm()
+    with _op_client() as op, _gh_client() as gh:
+        result = run_task_to_code(
+            llm=llm,
+            op=op,
+            gh=gh,
+            work_package_id=wp_id,
+            repo=s.github_repo or "",
+            base_branch=s.github_base_branch,
+            stack_hints=hints,
+            force=force,
+        )
+    console.print(
+        f"[green]✓ Opened PR #{result.pr_number}[/] on branch "
+        f"[cyan]{result.branch}[/]: {result.pr_url}"
+    )
+
+
+@app.command()
+def watch() -> None:
+    """Stage 4 — one tick of status updates across tracked PRs."""
+    with _op_client() as op, _gh_client() as gh:
+        changes = run_status_updates(op=op, gh=gh)
+
+    table = Table(title=f"Status tick — {len(changes)} tracked work packages")
+    table.add_column("WP")
+    table.add_column("PR")
+    table.add_column("Transition", style="cyan")
+    table.add_column("New status")
+    for c in changes:
+        table.add_row(
+            str(c.work_package_id),
+            f"#{c.pr_number}",
+            c.transition,
+            c.new_status or "—",
+        )
+    console.print(table)
+
+
+@app.command("run-all")
+def run_all(
+    wp_id: Annotated[int, typer.Argument(help="Idea work package ID to drive end-to-end")],
+    hints: Annotated[str, typer.Option(help="Stack hints for code stage")] = (
+        "Python / FastAPI / pytest (adjust if your repo differs)"
+    ),
+    skip_code: Annotated[bool, typer.Option("--skip-code", help="Stop after decompose")] = False,
+) -> None:
+    """Chain stages 1 → 2 → 3 on a single idea. Code stage targets the first child task."""
+    s = get_settings()
+    llm = get_llm()
+    with _op_client() as op:
+        spec_result = run_idea_to_spec(llm=llm, op=op, work_package_id=wp_id)
+        console.print(f"[green]✓ spec[/] for WP #{spec_result.work_package_id}")
+
+        decomp = run_spec_to_tasks(
+            llm=llm,
+            op=op,
+            parent_work_package_id=wp_id,
+            project_identifier=s.openproject_project,
+        )
+        console.print(
+            f"[green]✓ decompose[/] → {len(decomp.created_task_ids)} children: "
+            f"{decomp.created_task_ids}"
+        )
+
+        if skip_code or not decomp.created_task_ids:
+            return
+
+        first = decomp.created_task_ids[0]
+        with _gh_client() as gh:
+            code_result = run_task_to_code(
+                llm=llm,
+                op=op,
+                gh=gh,
+                work_package_id=first,
+                repo=s.github_repo or "",
+                base_branch=s.github_base_branch,
+                stack_hints=hints,
+            )
+        console.print(f"[green]✓ code[/] PR #{code_result.pr_number} → {code_result.pr_url}")
+
+
+@app.command()
+def doctor() -> None:
+    """Validate configuration + connectivity without mutating anything."""
+    s = get_settings()
+    report: dict[str, str] = {}
+    report["openproject_url"] = s.openproject_url
+    report["project"] = s.openproject_project
+    report["llm_provider"] = s.aidlc_llm_provider.value
+    report["llm_model"] = (
+        s.groq_model if s.aidlc_llm_provider.value == "groq" else s.anthropic_model
+    )
+    report["github_repo"] = s.github_repo or "(not configured)"
+    report["db_path"] = str(s.aidlc_db_path)
+
+    try:
+        with _op_client() as op:
+            statuses = op.list_statuses()
+            types = op.list_types()
+        report["openproject_statuses"] = ", ".join(st.name for st in statuses[:8]) + (
+            "…" if len(statuses) > 8 else ""
+        )
+        report["openproject_types"] = ", ".join(t.name for t in types[:8])
+    except Exception as exc:  # doctor output is for humans
+        report["openproject_error"] = str(exc)
+
+    if s.github_token is not None and s.github_repo is not None:
+        try:
+            with _gh_client() as gh:
+                sha = gh.get_branch_sha(s.github_base_branch)
+            report["github_base_sha"] = sha[:12]
+        except Exception as exc:
+            report["github_error"] = str(exc)
+
+    console.print_json(json.dumps(report))
+
+
+if __name__ == "__main__":
+    app()

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose up *)",
+      "Read(//Applications/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/gmaini/.docker/bin/**)",
+      "Bash(openssl rand *)",
+      "Bash(brew install *)",
+      "Bash(docker compose ps *)",
+      "Bash(docker compose logs *)",
+      "Bash(docker compose *)",
+      "Bash(curl *)",
+      "Bash(make seed *)",
+      "Bash(make install *)",
+      "Bash(.venv/bin/python *)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(PY=.venv/bin/python make seed *)",
+      "Bash(.venv/bin/aidlc doctor *)",
+      "Bash(git init *)",
+      "Bash(git branch *)",
+      "Bash(git add *)"
+    ]
+  }
+}

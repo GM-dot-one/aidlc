@@ -1,0 +1,70 @@
+# OpenProject Community Edition — single-container "all-in-one" image
+# Docs: https://www.openproject.org/docs/installation-and-operations/installation/docker/
+#
+# First boot takes 2-5 minutes while OP migrates its DB. The Makefile `up`
+# target polls /health_checks/default until the app is ready.
+#
+# Default admin on first login:
+#   username: admin
+#   password: admin   (OpenProject forces a change on first login)
+
+x-op-env: &op-env
+  OPENPROJECT_HTTPS: "${OPENPROJECT_HTTPS:-false}"
+  OPENPROJECT_HOST__NAME: "${OPENPROJECT_HOST__NAME:-localhost:8080}"
+  OPENPROJECT_SECRET__KEY__BASE: "${OPENPROJECT_SECRET_KEY_BASE:?set OPENPROJECT_SECRET_KEY_BASE in .env}"
+  OPENPROJECT_DEFAULT__LANGUAGE: "${OPENPROJECT_DEFAULT__LANGUAGE:-en}"
+  # Pin internal Postgres so we use the external one below (matches OP docs)
+  DATABASE_URL: "postgres://openproject:openproject@db:5432/openproject?encoding=unicode&pool=20"
+  # Use the bundled Memcached service
+  OPENPROJECT_CACHE__MEMCACHE__SERVER: "cache:11211"
+  OPENPROJECT_RAILS__CACHE__STORE: "memcache"
+  # Keep uploads/repositories on a named volume
+  OPENPROJECT_ATTACHMENTS__STORAGE__PATH: "/var/openproject/assets"
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openproject
+      POSTGRES_USER: openproject
+      POSTGRES_PASSWORD: openproject
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openproject -d openproject"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  cache:
+    image: memcached:1.6-alpine
+    restart: unless-stopped
+    command: ["-m", "256"]
+
+  openproject:
+    image: openproject/openproject:14-slim
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    environment:
+      <<: *op-env
+    ports:
+      - "${OPENPROJECT_HOST_PORT:-8080}:8080"
+    volumes:
+      - op_assets:/var/openproject/assets
+      - op_pgdata_internal:/var/openproject/pgdata   # unused when external DB, but image expects the mount
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/health_checks/default"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+
+volumes:
+  pgdata:
+  op_assets:
+  op_pgdata_internal:

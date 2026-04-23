@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import event
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 from aidlc.config import get_settings
@@ -63,6 +64,12 @@ class StatusSnapshot(SQLModel, table=True):
 _engine: Any = None
 
 
+def _set_wal_mode(dbapi_conn: Any, _connection_record: Any) -> None:
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.close()
+
+
 def get_engine() -> Any:
     """Lazily create the SQLite engine and ensure parent dirs exist."""
     global _engine
@@ -70,6 +77,7 @@ def get_engine() -> Any:
         db_path = get_settings().aidlc_db_path
         db_path.parent.mkdir(parents=True, exist_ok=True)
         _engine = create_engine(f"sqlite:///{db_path}", echo=False)
+        event.listen(_engine, "connect", _set_wal_mode)
         SQLModel.metadata.create_all(_engine)
     return _engine
 

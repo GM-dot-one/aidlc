@@ -159,7 +159,7 @@ def run_review_and_merge(
             )
         else:
             raise
-    log.info("review.posted", pr=pr_number, event=event)
+    log.info("review.posted", pr=pr_number, review_event=event)
 
     # ---- merge if CI passes and verdict is approve -------------------------
     merged = False

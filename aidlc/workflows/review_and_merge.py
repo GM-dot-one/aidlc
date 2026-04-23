@@ -125,21 +125,40 @@ def run_review_and_merge(
     log.info("review.llm_verdict", wp=wp.id, verdict=verdict, comments=len(comments))
 
     # ---- post review on GitHub ---------------------------------------------
-    event = "APPROVE" if verdict == "approve" else "REQUEST_CHANGES"
-    review_body = f"**AI-DLC automated review**\n\n{summary}"
-    if comments:
-        review_body += "\n\nSee inline comments below."
+    # GitHub forbids REQUEST_CHANGES on your own PR (the token owner opened it).
+    # Fall back to COMMENT so the feedback is still posted.
+    event = "APPROVE" if verdict == "approve" else "COMMENT"
+    review_body = f"**AI-DLC automated review** — verdict: **{verdict}**\n\n{summary}"
 
-    gh.create_review(
-        number=pr_number,
-        body=review_body,
-        event=event,
-        comments=[
-            {"path": c["path"], "line": c["line"], "body": c["body"]}
-            for c in comments
-            if all(k in c for k in ("path", "line", "body"))
-        ],
-    )
+    inline_comments = [
+        {"path": c["path"], "line": c["line"], "body": c["body"]}
+        for c in comments
+        if all(k in c for k in ("path", "line", "body"))
+    ]
+
+    try:
+        gh.create_review(
+            number=pr_number,
+            body=review_body,
+            event=event,
+            comments=inline_comments,
+        )
+    except Exception as review_err:
+        # Inline comments with bad line numbers cause "Line could not be resolved".
+        # Retry with comments folded into the review body instead.
+        log.warning("review.inline_comments_failed", error=str(review_err)[:200])
+        if inline_comments:
+            folded = "\n\n---\n\n**Inline comments (could not attach to diff):**\n\n"
+            for c in inline_comments:
+                folded += f"- `{c['path']}` L{c['line']}: {c['body']}\n"
+            gh.create_review(
+                number=pr_number,
+                body=review_body + folded,
+                event=event,
+                comments=[],
+            )
+        else:
+            raise
     log.info("review.posted", pr=pr_number, event=event)
 
     # ---- merge if CI passes and verdict is approve -------------------------

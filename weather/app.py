@@ -9,7 +9,8 @@ from rich.console import Console
 
 from weather.api import fetch_weather
 from weather.cities import find_city, get_cities
-from weather.display import WeatherDisplay
+from weather.display import WeatherDisplay, format_weather_error
+from weather.errors import WeatherError
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -35,14 +36,19 @@ def show(
 
     city = find_city(city_name)
     if city is None:
-        console.print(f"[red]Unknown city:[/] {city_name!r}")
-        console.print("Available cities:")
+        console.print(f"[red]Error: City '{city_name}' was not found.[/]")
+        console.print("Please check the city name and try again.")
+        console.print("\nAvailable cities:")
         for c in get_cities():
             console.print(f"  - {c.display_name()}")
         raise typer.Exit(code=1)
 
-    weather = fetch_weather(city)
-    display.show(weather)
+    try:
+        weather = fetch_weather(city)
+        display.show(weather)
+    except WeatherError as exc:
+        console.print(f"[red]{format_weather_error(exc)}[/]")
+        raise typer.Exit(code=1)
 
 
 @app.command()

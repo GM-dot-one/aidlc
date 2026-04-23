@@ -14,7 +14,12 @@ from rich.text import Text
 
 from weather.api import fetch_weather
 from weather.cities import find_city, get_cities
-from weather.errors import CityNotFoundError, WeatherDataUnavailableError, WeatherError
+from weather.errors import (
+    APIUnavailableError,
+    CityNotFoundError,
+    WeatherDataUnavailableError,
+    WeatherError,
+)
 from weather.models import City, WeatherCondition, WeatherData
 from weather.service import get_weather
 
@@ -35,26 +40,17 @@ def format_weather_error(error: WeatherError) -> str:
         return (
             f"Error: City '{error.city}' was not found. Please check the city name and try again."
         )
+    if isinstance(error, APIUnavailableError):
+        return (
+            f"Error: The weather service is currently unavailable ({error.reason}). "
+            "Please try again later."
+        )
     if isinstance(error, WeatherDataUnavailableError):
         return (
             f"Error: Weather data is currently unavailable for '{error.city}'. "
             "Please try again later or select a different city."
         )
     return f"Error: An unexpected weather error occurred: {error}"
-
-
-def handle_weather_request(city: str) -> str:
-    """Handle a weather request, returning a formatted string or error message."""
-    try:
-        weather = get_weather(city)
-        return (
-            f"Weather for {weather.city.name}\n"
-            f"{weather.temperature_celsius:.1f}°C  /  {weather.temperature_fahrenheit:.1f}°F\n"
-            f"Humidity: {weather.humidity_percent:.1f}%\n"
-            f"Condition: {weather.condition.value}"
-        )
-    except WeatherError as exc:
-        return format_weather_error(exc)
 
 
 class WeatherDisplay:
@@ -174,12 +170,20 @@ class WeatherDisplay:
 
     def show_summary(self) -> None:
         cities = get_cities()
-        weather_list = [fetch_weather(c) for c in cities]
+        weather_list: list[WeatherData] = []
+        errors: list[str] = []
+        for city in cities:
+            try:
+                weather_list.append(fetch_weather(city))
+            except WeatherError as exc:
+                errors.append(format_weather_error(exc))
         self.console.print(
             Text("Weather Summary", style="bold underline"),
             justify="center",
         )
         self.show_multiple(weather_list)
+        for msg in errors:
+            self.console.print(f"[red]{msg}[/]")
 
 
 def handle_weather_request(city_name: str) -> str:

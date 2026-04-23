@@ -21,6 +21,37 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  /* ── Skip navigation ─────────────────────────────────────────── */
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    z-index: 100;
+    padding: 8px 16px;
+    background: var(--accent);
+    color: white;
+    border-radius: 0 0 8px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .skip-link:focus {
+    top: 0;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg-primary);
@@ -97,6 +128,17 @@
     font-size: 14px;
     width: 100%;
     color: var(--text-primary);
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Remove Safari search input decorations */
+  .search-box input[type="search"]::-webkit-search-decoration,
+  .search-box input[type="search"]::-webkit-search-cancel-button,
+  .search-box input[type="search"]::-webkit-search-results-button,
+  .search-box input[type="search"]::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   .search-box input::placeholder { color: var(--text-secondary); }
@@ -257,7 +299,7 @@
   }
 
   #welcome-state .welcome-icon { font-size: 72px; margin-bottom: 20px; }
-  #welcome-state h2 { font-size: 22px; color: var(--text-primary); margin-bottom: 8px; font-weight: 700; }
+  #welcome-state h1 { font-size: 22px; color: var(--text-primary); margin-bottom: 8px; font-weight: 700; }
   #welcome-state p { font-size: 15px; }
 
   /* Loading state */
@@ -569,11 +611,52 @@
 
   footer a:hover { text-decoration: underline; }
 
+  /* ── Focus styles ─────────────────────────────────────────────── */
+  .search-btn:focus-visible,
+  .retry-btn:focus-visible,
+  .recent-chip:focus-visible,
+  .unit-toggle button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ── Touch targets ──────────────────────────────────────────── */
+  .unit-toggle button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .recent-chip {
+    min-height: 44px;
+  }
+
+  .search-btn {
+    min-height: 44px;
+  }
+
+  .retry-btn {
+    min-height: 44px;
+  }
+
+  .city-dropdown-item {
+    min-height: 44px;
+  }
+
+  /* ── Reduced motion ─────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; border-top-color: var(--accent); }
+    .search-spinner { animation: none; border-top-color: var(--accent); }
+    .state.active { animation: none; }
+    .forecast-day:hover { transform: none; }
+  }
+
   /* ── Error type icon variants ────────────────────────────────── */
   .error-icon { transition: none; }
 </style>
 </head>
 <body>
+
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
 <header>
   <div class="logo">
@@ -608,6 +691,7 @@
           aria-label="City name"
           aria-autocomplete="list"
           aria-controls="city-dropdown"
+          aria-expanded="false"
           autocomplete="off"
           autocorrect="off"
           spellcheck="false"
@@ -625,9 +709,9 @@
   </div>
 </header>
 
-<main>
+<main id="main-content">
   <!-- Recent searches -->
-  <div class="recent-section" id="recent-section" aria-label="Recent searches">
+  <div class="recent-section" id="recent-section" role="region" aria-label="Recent searches">
     <div class="recent-label">Recent searches</div>
     <div class="recent-list" id="recent-list"></div>
   </div>
@@ -635,7 +719,7 @@
   <!-- Welcome state -->
   <div class="state active" id="welcome-state" aria-live="polite">
     <div class="welcome-icon" aria-hidden="true">🌤️</div>
-    <h2>Search for any city</h2>
+    <h1>Search for any city</h1>
     <p>Type a city name above to see current weather conditions.</p>
   </div>
 
@@ -660,9 +744,9 @@
 </main>
 
 <footer>
-  Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+  Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo<span class="sr-only"> (opens in new tab)</span></a>
   &nbsp;&middot;&nbsp;
-  City search by <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noopener noreferrer">Open-Meteo Geocoding</a>
+  City search by <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noopener noreferrer">Open-Meteo Geocoding<span class="sr-only"> (opens in new tab)</span></a>
 </footer>
 
 <script>
@@ -913,12 +997,16 @@
 
   function showDropdown(suggestions) {
     var dropdown = document.getElementById("city-dropdown");
+    var input = document.getElementById("city-input");
     dropdown.innerHTML = "";
     highlightedIndex = -1;
+    input.setAttribute("aria-expanded", "true");
+    input.removeAttribute("aria-activedescendant");
 
     suggestions.forEach(function (city, idx) {
       var item = document.createElement("div");
       item.className = "city-dropdown-item";
+      item.id = "city-option-" + idx;
       item.setAttribute("role", "option");
       item.setAttribute("data-index", String(idx));
 
@@ -953,25 +1041,37 @@
 
   function hideDropdown() {
     var dropdown = document.getElementById("city-dropdown");
+    var input = document.getElementById("city-input");
     dropdown.hidden = true;
     dropdown.innerHTML = "";
     currentSuggestions = [];
     highlightedIndex = -1;
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
   }
 
   function showEmptyDropdown(query) {
     var dropdown = document.getElementById("city-dropdown");
-    dropdown.innerHTML = '<div class="city-dropdown-empty">No cities found for "' +
+    var input = document.getElementById("city-input");
+    dropdown.innerHTML = '<div class="city-dropdown-empty" role="alert">No cities found for "' +
       escapeHtml(query) + '"</div>';
     dropdown.hidden = false;
+    input.setAttribute("aria-expanded", "true");
   }
 
   function setHighlight(idx) {
     highlightedIndex = idx;
+    var input = document.getElementById("city-input");
     var items = document.querySelectorAll(".city-dropdown-item");
     items.forEach(function (item, i) {
       item.classList.toggle("highlighted", i === idx);
+      item.setAttribute("aria-selected", i === idx ? "true" : "false");
     });
+    if (idx >= 0) {
+      input.setAttribute("aria-activedescendant", "city-option-" + idx);
+    } else {
+      input.removeAttribute("aria-activedescendant");
+    }
   }
 
   /* ─── Debounced input handler ───────────────────────────────── */
@@ -1296,6 +1396,16 @@
       document.getElementById("btn-c").classList.remove("active");
       document.getElementById("btn-c").setAttribute("aria-checked", "false");
       rerenderIfLoaded();
+    }
+  });
+
+  // Unit toggle radio group: arrow key navigation per WAI-ARIA radio group pattern
+  document.querySelector(".unit-toggle").addEventListener("keydown", function (e) {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      var target = e.key === "ArrowLeft" ? "btn-c" : "btn-f";
+      document.getElementById(target).click();
+      document.getElementById(target).focus();
     }
   });
 

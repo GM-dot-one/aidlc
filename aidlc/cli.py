@@ -3,7 +3,9 @@
 Commands roughly mirror the workflow stages:
     aidlc spec <wp-id>
     aidlc decompose <wp-id>
-    aidlc code <wp-id>
+    aidlc code <wp-id>             # one-shot LLM scaffold (cheap)
+    aidlc code-local <wp-id>       # run Claude Code locally, push, open PR
+    aidlc code-all-local <parent-wp-id>  # batch Claude Code across children
     aidlc watch
     aidlc run-all <wp-id>          # chain the three authoring stages
     aidlc doctor                   # sanity-check configuration
@@ -18,16 +20,19 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from aidlc.coding_agents import ClaudeCodeAgent
 from aidlc.config import get_settings
 from aidlc.git_host import GitHubClient
 from aidlc.llm import get_llm
 from aidlc.logging import get_logger
 from aidlc.openproject import OpenProjectClient
 from aidlc.workflows import (
+    run_code_all_local,
     run_idea_to_spec,
     run_spec_to_tasks,
     run_status_updates,
     run_task_to_code,
+    run_task_to_code_local,
 )
 
 app = typer.Typer(
@@ -51,6 +56,16 @@ def _gh_client() -> GitHubClient:
     s = get_settings()
     token, repo = s.require_github()
     return GitHubClient(token=token.get_secret_value(), repo=repo)
+
+
+def _claude_agent() -> ClaudeCodeAgent:
+    s = get_settings()
+    return ClaudeCodeAgent(
+        bin_path=s.claude_code_bin,
+        permission_mode=s.claude_code_permission_mode,
+        max_turns=s.claude_code_max_turns,
+        timeout_s=s.claude_code_timeout_s,
+    )
 
 
 @app.command()
@@ -117,6 +132,78 @@ def code(
         f"[green]✓ Opened PR #{result.pr_number}[/] on branch "
         f"[cyan]{result.branch}[/]: {result.pr_url}"
     )
+
+
+@app.command("code-local")
+def code_local(
+    wp_id: Annotated[int, typer.Argument(help="Task work package to implement")],
+    hints: Annotated[
+        str,
+        typer.Option(help="Stack hints Claude will verify by reading the repo"),
+    ] = "(inspect the repo to determine the stack)",
+    force: Annotated[bool, typer.Option("--force")] = False,
+) -> None:
+    """Stage 3b — run Claude Code on a local clone and open a draft PR."""
+    s = get_settings()
+    token, repo = s.require_github()
+    agent = _claude_agent()
+    with _op_client() as op, _gh_client() as gh:
+        result = run_task_to_code_local(
+            agent=agent,
+            op=op,
+            gh=gh,
+            work_package_id=wp_id,
+            repo=repo,
+            github_token=token.get_secret_value(),
+            base_branch=s.github_base_branch,
+            workdir_root=s.aidlc_workdir,
+            stack_hints=hints,
+            force=force,
+        )
+    console.print(
+        f"[green]✓ Opened PR #{result.pr_number}[/] on [cyan]{result.branch}[/]: "
+        f"{result.pr_url}\n  ({len(result.changed_files)} files changed by {agent.name})"
+    )
+
+
+@app.command("code-all-local")
+def code_all_local(
+    parent_wp_id: Annotated[int, typer.Argument(help="Parent (decomposed) WP id")],
+    hints: Annotated[
+        str,
+        typer.Option(help="Stack hints Claude will verify by reading the repo"),
+    ] = "(inspect the repo to determine the stack)",
+    force: Annotated[bool, typer.Option("--force")] = False,
+) -> None:
+    """Run Claude Code on every child task of a decomposed parent, sequentially."""
+    s = get_settings()
+    token, repo = s.require_github()
+    agent = _claude_agent()
+    with _op_client() as op, _gh_client() as gh:
+        result = run_code_all_local(
+            agent=agent,
+            op=op,
+            gh=gh,
+            parent_work_package_id=parent_wp_id,
+            repo=repo,
+            github_token=token.get_secret_value(),
+            base_branch=s.github_base_branch,
+            workdir_root=s.aidlc_workdir,
+            stack_hints=hints,
+            force=force,
+            project_identifier=s.openproject_project,
+        )
+
+    table = Table(title=f"code-all-local — parent WP #{parent_wp_id}")
+    table.add_column("WP")
+    table.add_column("Outcome")
+    table.add_column("Detail")
+    for ok in result.successes:
+        table.add_row(str(ok.work_package_id), "[green]✓ PR[/]", f"#{ok.pr_number} {ok.pr_url}")
+    for wp_id, err in result.failures:
+        table.add_row(str(wp_id), "[red]✗ failed[/]", err[:120])
+    console.print(table)
+    console.print(f"[bold]Done:[/] {len(result.successes)} ok, {len(result.failures)} failed")
 
 
 @app.command()

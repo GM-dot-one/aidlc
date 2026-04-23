@@ -7,8 +7,10 @@ executable documentation of the collaborators' contracts.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
+from aidlc.coding_agents import CodingResult
 from aidlc.git_host import PullRequest
 from aidlc.openproject import Status, Type, WorkPackage
 
@@ -42,6 +44,42 @@ class FakeLLM:
         if not self.responses:
             raise AssertionError("FakeLLM ran out of responses — test mis-configured")
         return self.responses.pop(0)
+
+
+# ---------- Coding agent ---------------------------------------------------
+
+
+@dataclass
+class FakeCodingAgent:
+    """Writes a pre-programmed set of files into the workdir when invoked.
+
+    Mirrors the Claude Code contract: the agent edits files on disk, the
+    workflow commits them. Each entry in ``files_to_write`` is a (relative
+    path, content) tuple.
+    """
+
+    name: str = "fake-agent"
+    summary: str = "implemented task"
+    files_to_write: list[tuple[str, str]] = field(default_factory=list)
+    turns: int | None = 3
+    cost_usd: float | None = 0.01
+    calls: list[dict[str, Any]] = field(default_factory=list)
+    raise_on_invoke: Exception | None = None
+
+    def implement(self, *, prompt: str, workdir: Path) -> CodingResult:
+        self.calls.append({"prompt": prompt, "workdir": str(workdir)})
+        if self.raise_on_invoke is not None:
+            raise self.raise_on_invoke
+        for rel, content in self.files_to_write:
+            target = workdir / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content)
+        return CodingResult(
+            summary=self.summary,
+            raw_output="(fake)",
+            turns=self.turns,
+            cost_usd=self.cost_usd,
+        )
 
 
 # ---------- OpenProject ----------------------------------------------------
@@ -199,10 +237,13 @@ class FakeGitHub:
     ) -> PullRequest:
         number = self.next_pr
         self.next_pr += 1
+        # Tolerate branches created out-of-band (e.g. pushed via real git in
+        # task_to_code_local tests) — we don't know the SHA so we fabricate one.
+        head_sha = self.branches.get(head) or f"remote-{head}"[:40].ljust(40, "0")
         pr = PullRequest(
             number=number,
             url=f"https://github.com/acme/repo/pull/{number}",
-            head_sha=self.branches[head],
+            head_sha=head_sha,
             state="open",
             merged=False,
         )

@@ -78,6 +78,17 @@ class Settings(BaseSettings):
     aidlc_workdir: Path = Field(default=Path(".aidlc/workdir"))
     aidlc_log_level: LogLevel = Field(default=LogLevel.INFO)
 
+    # --- Claude Code (local code-generation agent) ---------------------------
+    # Path to the `claude` CLI. Override if it's not on PATH or you use npx.
+    claude_code_bin: str = Field(default="claude")
+    # Permission mode for headless runs: default | acceptEdits | bypassPermissions | plan
+    # bypassPermissions lets Claude run tests and bash without prompting.
+    claude_code_permission_mode: str = Field(default="bypassPermissions")
+    # Cap agent loops so a runaway session can't eat all your tokens.
+    claude_code_max_turns: int = Field(default=40)
+    # Hard timeout per task (seconds).
+    claude_code_timeout_s: int = Field(default=1800)
+
     @field_validator("openproject_url")
     @classmethod
     def _strip_trailing_slash(cls, v: str) -> str:

@@ -19,7 +19,14 @@
       "Bash(.venv/bin/aidlc doctor *)",
       "Bash(git init *)",
       "Bash(git branch *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(.venv/bin/aidlc run-all *)",
+      "Bash(.venv/bin/aidlc watch *)",
+      "Bash(ps *)",
+      "Bash(.venv/bin/aidlc *)"
     ]
   }
 }

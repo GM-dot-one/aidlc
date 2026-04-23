@@ -24,6 +24,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from aidlc.cache import TTLCache
 from aidlc.logging import get_logger
 from aidlc.openproject.models import Status, Type, WorkPackage
 
@@ -62,6 +63,7 @@ class OpenProjectClient:
             "Content-Type": "application/json",
         }
         self._client = client or httpx.Client(timeout=timeout, headers=self._headers)
+        self._cache = TTLCache()
 
     def close(self) -> None:
         self._client.close()
@@ -178,18 +180,31 @@ class OpenProjectClient:
     # ---- metadata ----------------------------------------------------------
 
     def list_types(self) -> list[Type]:
+        cached = self._cache.get("types")
+        if cached is not None:
+            return cached  # type: ignore[return-value]
         payload = self._get("/api/v3/types")
-        return [
+        types = [
             Type(id=el["id"], name=el["name"])
             for el in (payload.get("_embedded") or {}).get("elements", [])
         ]
+        self._cache.set("types", types)
+        return types
 
     def list_statuses(self) -> list[Status]:
+        cached = self._cache.get("statuses")
+        if cached is not None:
+            return cached  # type: ignore[return-value]
         payload = self._get("/api/v3/statuses")
-        return [
+        statuses = [
             Status(id=el["id"], name=el["name"], isClosed=el.get("isClosed", False))
             for el in (payload.get("_embedded") or {}).get("elements", [])
         ]
+        self._cache.set("statuses", statuses)
+        return statuses
+
+    def invalidate_metadata_cache(self) -> None:
+        self._cache.clear()
 
     def find_type_by_name(self, name: str) -> Type | None:
         for t in self.list_types():

@@ -11,6 +11,10 @@ Endpoints we exercise:
   - PUT   /repos/{owner}/{repo}/contents/{path}              (commit a file)
   - POST  /repos/{owner}/{repo}/pulls                        (open PR)
   - GET   /repos/{owner}/{repo}/pulls/{number}               (poll PR state)
+  - GET   /repos/{owner}/{repo}/pulls/{number}               (diff, via Accept header)
+  - POST  /repos/{owner}/{repo}/pulls/{number}/reviews       (submit review)
+  - PUT   /repos/{owner}/{repo}/pulls/{number}/merge         (merge PR)
+  - PUT   /repos/{owner}/{repo}/pulls/{number}/update-branch (update branch)
   - GET   /repos/{owner}/{repo}/commits/{sha}/check-runs     (CI conclusion)
 """
 
@@ -165,6 +169,63 @@ class GitHubClient:
             state=payload["state"],
             merged=bool(payload.get("merged", False)),
         )
+
+    # ---- reviews & merging --------------------------------------------------
+
+    def get_pull_request_diff(self, number: int) -> str:
+        """Fetch the unified diff for a pull request."""
+        url = f"{self.BASE}/repos/{self._repo}/pulls/{number}"
+        log.debug("gh.request", method="GET", path=f"/repos/{self._repo}/pulls/{number}")
+        headers = {**self._headers, "Accept": "application/vnd.github.diff"}
+        response = self._client.request("GET", url, headers=headers)
+        if response.status_code >= 400:
+            raise GitHubError(response.status_code, response.text, url)
+        return response.text
+
+    def create_review(
+        self,
+        number: int,
+        body: str,
+        event: str,
+        comments: list[dict[str, object]] | None = None,
+    ) -> dict[str, object]:
+        """Submit a pull request review.
+
+        ``event`` should be ``"APPROVE"`` or ``"REQUEST_CHANGES"``.
+        ``comments`` is an optional list of ``{"path": ..., "line": ..., "body": ...}``
+        dicts for inline review comments.
+        """
+        payload: dict[str, object] = {"body": body, "event": event}
+        if comments:
+            payload["comments"] = comments
+        resp = self._request(
+            "POST", f"/repos/{self._repo}/pulls/{number}/reviews", json=payload
+        )
+        return resp.json()  # type: ignore[no-any-return]
+
+    def merge_pull_request(
+        self, number: int, merge_method: str = "squash"
+    ) -> dict[str, object]:
+        """Merge a pull request via the REST API."""
+        resp = self._request(
+            "PUT",
+            f"/repos/{self._repo}/pulls/{number}/merge",
+            json={"merge_method": merge_method},
+        )
+        return resp.json()  # type: ignore[no-any-return]
+
+    def update_pull_request_branch(self, number: int) -> dict[str, object]:
+        """Update a pull request branch with the latest base branch.
+
+        Equivalent to clicking "Update branch" in the GitHub UI.
+        """
+        resp = self._request(
+            "PUT",
+            f"/repos/{self._repo}/pulls/{number}/update-branch",
+        )
+        return resp.json()  # type: ignore[no-any-return]
+
+    # ---- CI ----------------------------------------------------------------
 
     def ci_conclusion(self, sha: str) -> str | None:
         """Aggregate check-runs for a commit.

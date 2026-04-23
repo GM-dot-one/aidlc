@@ -26,7 +26,12 @@
       "Bash(.venv/bin/aidlc run-all *)",
       "Bash(.venv/bin/aidlc watch *)",
       "Bash(ps *)",
-      "Bash(.venv/bin/aidlc *)"
+      "Bash(.venv/bin/aidlc *)",
+      "Bash(/Users/gmaini/Code/AIDLC/.venv/bin/aidlc code-local *)",
+      "Bash(/Users/gmaini/Code/AIDLC/.venv/bin/python *)",
+      "Bash(gh pr *)",
+      "Bash(export GH_TOKEN=$\\(grep GITHUB_TOKEN /Users/gmaini/Code/AIDLC/.env)",
+      "Bash(/Users/gmaini/Code/AIDLC/.venv/bin/aidlc *)"
     ]
   }
 }

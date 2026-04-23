@@ -7,6 +7,8 @@ Commands roughly mirror the workflow stages:
     aidlc code-local <wp-id>       # run Claude Code locally, push, open PR
     aidlc code-all-local <parent-wp-id>  # batch Claude Code across children
     aidlc watch
+    aidlc review <wp-id>           # AI-review a single PR, auto-merge if clean
+    aidlc review-all <parent-wp-id>  # review & merge all children with open PRs
     aidlc run-all <wp-id>          # chain the three authoring stages
     aidlc doctor                   # sanity-check configuration
 """
@@ -29,6 +31,8 @@ from aidlc.openproject import OpenProjectClient
 from aidlc.workflows import (
     run_code_all_local,
     run_idea_to_spec,
+    run_review_all,
+    run_review_and_merge,
     run_spec_to_tasks,
     run_status_updates,
     run_task_to_code,
@@ -225,6 +229,73 @@ def watch() -> None:
             c.new_status or "—",
         )
     console.print(table)
+
+
+@app.command()
+def review(
+    wp_id: Annotated[int, typer.Argument(help="Work package ID with a linked PR to review")],
+    force: Annotated[bool, typer.Option("--force", help="Re-review even if already done")] = False,
+) -> None:
+    """Stage 5 — AI-review a PR linked to a work package and auto-merge if approved + CI green."""
+    s = get_settings()
+    llm = get_llm()
+    with _op_client() as op, _gh_client() as gh:
+        result = run_review_and_merge(
+            llm=llm,
+            op=op,
+            gh=gh,
+            work_package_id=wp_id,
+            repo=s.github_repo or "",
+            force=force,
+        )
+    merged_tag = " and [green]merged[/]" if result.merged else ""
+    console.print(
+        f"[green]✓ Reviewed PR #{result.pr_number}[/] — verdict: "
+        f"[cyan]{result.verdict}[/]{merged_tag}\n  {result.summary[:200]}"
+    )
+
+
+@app.command("review-all")
+def review_all(
+    parent_wp_id: Annotated[int, typer.Argument(help="Parent WP whose children to review")],
+    force: Annotated[bool, typer.Option("--force", help="Re-review even if already done")] = False,
+) -> None:
+    """Review and merge all children of a parent WP that have open PRs."""
+    s = get_settings()
+    llm = get_llm()
+    with _op_client() as op, _gh_client() as gh:
+        result = run_review_all(
+            llm=llm,
+            op=op,
+            gh=gh,
+            parent_work_package_id=parent_wp_id,
+            repo=s.github_repo or "",
+            project_identifier=s.openproject_project,
+            force=force,
+        )
+
+    table = Table(title=f"review-all — parent WP #{parent_wp_id}")
+    table.add_column("WP")
+    table.add_column("PR")
+    table.add_column("Verdict", style="cyan")
+    table.add_column("Merged")
+    table.add_column("Detail")
+    for ok in result.successes:
+        table.add_row(
+            str(ok.work_package_id),
+            f"#{ok.pr_number}",
+            ok.verdict,
+            "[green]yes[/]" if ok.merged else "no",
+            ok.summary[:120],
+        )
+    for wp_id, err in result.failures:
+        table.add_row(str(wp_id), "—", "[red]error[/]", "—", err[:120])
+    console.print(table)
+    merged_count = sum(1 for r in result.successes if r.merged)
+    console.print(
+        f"[bold]Done:[/] {len(result.successes)} reviewed, "
+        f"{merged_count} merged, {len(result.failures)} failed"
+    )
 
 
 @app.command("run-all")

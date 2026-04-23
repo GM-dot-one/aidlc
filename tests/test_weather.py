@@ -32,7 +32,7 @@ _SAMPLE_RESPONSE = {
 def test_lookup_city_returns_matching_city() -> None:
     city = lookup_city("London")
     assert city.name == "London"
-    assert city.country == "GB"
+    assert city.country == "United Kingdom"
     assert city.latitude == pytest.approx(51.5074)
 
 

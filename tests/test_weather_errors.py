@@ -47,16 +47,16 @@ class TestGetWeather:
     def test_returns_data_for_known_city_with_data(self) -> None:
         result = get_weather("London")
         assert isinstance(result, WeatherData)
-        assert result.city == "London"
+        assert result.city.name == "London"
         assert result.temperature_celsius == 14.0
 
     def test_case_insensitive_lookup(self) -> None:
         result = get_weather("PARIS")
-        assert result.city == "Paris"
+        assert result.city.name == "Paris"
 
     def test_strips_whitespace(self) -> None:
         result = get_weather("  tokyo  ")
-        assert result.city == "Tokyo"
+        assert result.city.name == "Tokyo"
 
     def test_raises_city_not_found_for_unknown_city(self) -> None:
         with pytest.raises(CityNotFoundError) as exc_info:

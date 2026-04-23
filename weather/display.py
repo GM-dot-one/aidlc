@@ -16,6 +16,7 @@ from weather.api import fetch_weather
 from weather.cities import find_city, get_cities
 from weather.errors import CityNotFoundError, WeatherDataUnavailableError, WeatherError
 from weather.models import City, WeatherCondition, WeatherData
+from weather.service import get_weather
 
 CONDITION_LABELS: dict[WeatherCondition, str] = {
     WeatherCondition.SUNNY: "[yellow]Sunny[/]",
@@ -31,13 +32,29 @@ CONDITION_LABELS: dict[WeatherCondition, str] = {
 
 def format_weather_error(error: WeatherError) -> str:
     if isinstance(error, CityNotFoundError):
-        return f"Error: City '{error.city}' was not found. Please check the city name and try again."
+        return (
+            f"Error: City '{error.city}' was not found. Please check the city name and try again."
+        )
     if isinstance(error, WeatherDataUnavailableError):
         return (
             f"Error: Weather data is currently unavailable for '{error.city}'. "
             "Please try again later or select a different city."
         )
     return f"Error: An unexpected weather error occurred: {error}"
+
+
+def handle_weather_request(city: str) -> str:
+    """Handle a weather request, returning a formatted string or error message."""
+    try:
+        weather = get_weather(city)
+        return (
+            f"Weather for {weather.city.name}\n"
+            f"{weather.temperature_celsius:.1f}°C  /  {weather.temperature_fahrenheit:.1f}°F\n"
+            f"Humidity: {weather.humidity_percent:.1f}%\n"
+            f"Condition: {weather.condition.value}"
+        )
+    except WeatherError as exc:
+        return format_weather_error(exc)
 
 
 class WeatherDisplay:

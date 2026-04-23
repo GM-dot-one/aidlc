@@ -6,30 +6,29 @@ for cases where city data is unavailable.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
+from weather.cities import find_city
 from weather.errors import CityNotFoundError, WeatherDataUnavailableError
-from weather.models import WeatherData
+from weather.models import WeatherCondition, WeatherData
 
 # TODO(ai-dlc): Replace with real data source from task #4 (weather data retrieval).
 _SAMPLE_DATA: dict[str, dict[str, Any]] = {
     "london": {
-        "city": "London",
         "temperature_celsius": 14.0,
-        "description": "Overcast clouds",
         "humidity_percent": 72.0,
+        "condition": WeatherCondition.CLOUDY,
     },
     "paris": {
-        "city": "Paris",
         "temperature_celsius": 18.5,
-        "description": "Partly cloudy",
         "humidity_percent": 60.0,
+        "condition": WeatherCondition.PARTLY_CLOUDY,
     },
     "tokyo": {
-        "city": "Tokyo",
         "temperature_celsius": 22.0,
-        "description": "Clear sky",
         "humidity_percent": 55.0,
+        "condition": WeatherCondition.SUNNY,
     },
 }
 
@@ -65,4 +64,14 @@ def get_weather(city: str) -> WeatherData:
             city, reason="weather service returned no data for this city"
         )
 
-    return WeatherData(**raw)
+    city_obj = find_city(normalised)
+    if city_obj is None:
+        raise WeatherDataUnavailableError(city, reason="city metadata not found in registry")
+
+    return WeatherData(
+        city=city_obj,
+        temperature_celsius=raw["temperature_celsius"],
+        humidity_percent=raw["humidity_percent"],
+        condition=raw["condition"],
+        timestamp=datetime.now(tz=UTC),
+    )

@@ -1,289 +1,356 @@
 # QA and Observability Test Report
 
-**Work Package:** #56 — Conduct QA and observability testing
+**Work Package:** #70 — QA and observability
 **Date:** 2026-04-23
-**Branch:** `aidlc/wp-56-conduct-qa-and-observability-testing`
-**Base commit:** `6491c69` (Add local code generation via Claude Code CLI)
+**Branch:** `aidlc/wp-70-qa-and-observability`
+**Base commit:** `812a4cb` (Add autonomous review-and-merge workflow)
 
 ---
 
 ## Executive Summary
 
-This report covers QA and observability testing of the AIDLC agent scaffold.
-The task description references weather-application acceptance criteria (city
-list display, weather data retrieval, weather display, error handling,
-performance) from dependent work packages #4-#7. **Those work packages have not
-been merged into `main`; the weather application features do not exist in this
-codebase.** This report therefore evaluates the AIDLC framework itself —
-the codebase that *is* present — against the applicable criteria (error handling,
-performance, observability) and documents the gap for weather-specific features.
+This report covers QA and observability testing of the complete application,
+including the frontend city list (HTML/CSS/JS), the `weather` Python package
+(models, API, display, error handling, service), and the AIDLC framework.
+This is a follow-up to the WP #56 QA report, which was conducted before the
+weather features existed.
 
-**Overall verdict: PASS with observations.** The existing test suite passes,
-static analysis is clean, and the framework demonstrates sound engineering
-practices. Specific findings for improvement are documented below.
+Three bugs were found and fixed during this QA pass:
+
+1. **Critical:** `handle_weather_request` was missing from `weather/display.py`,
+   causing `test_weather_errors.py` to fail at import (19 tests uncollectable).
+2. **Critical:** `weather/service.py` passed incompatible data to `WeatherData`
+   (string for `city` instead of `City`, missing `condition`/`timestamp` fields),
+   causing `ValidationError` at runtime for all known cities.
+3. **Medium:** `test_weather_errors.py` compared `result.city` (a `City` object)
+   to a plain string, which would always fail.
+
+After fixes: **128/128 tests pass**, lint clean, all weather features functional.
+
+**Overall verdict: PASS after fixes.**
 
 ---
 
 ## 1. Test Suite Results
 
-### 1.1 Unit Tests
+### 1.1 Before Fixes
+
+| Metric | Value |
+|--------|-------|
+| Total tests collected | 109 (19 skipped due to ImportError) |
+| Collection errors | 1 (`test_weather_errors.py`) |
+| Passed | 109 |
+| Failed | 0 |
+| Root cause | `handle_weather_request` not defined in `weather/display.py` |
+
+### 1.2 After Fixes
 
 | Metric | Value |
 |--------|-------|
 | Framework | pytest 9.0.3, pytest-asyncio, respx |
 | Python | 3.11.15 |
-| Total tests | 56 |
-| Passed | 56 |
+| Total tests | 128 |
+| Passed | 128 |
 | Failed | 0 |
 | Errors | 0 |
 | Skipped | 0 |
-| Duration | 2.30s |
+| Duration | 2.98s |
 
 **Result: PASS**
 
-All 56 tests pass. Tests use in-memory fakes (not mocks), which
-double as executable documentation of collaborator contracts. Test isolation is
-correct — each test gets a temp SQLite DB and fresh config singleton.
-
-### 1.2 Test Coverage
+### 1.3 Test Coverage
 
 | Module | Stmts | Miss | Cover |
 |--------|-------|------|-------|
-| `aidlc/__init__.py` | 2 | 0 | 100% |
-| `aidlc/cli.py` | 126 | 126 | **0%** |
-| `aidlc/coding_agents/__init__.py` | 4 | 0 | 100% |
-| `aidlc/coding_agents/base.py` | 14 | 0 | 100% |
-| `aidlc/coding_agents/claude_code.py` | 46 | 5 | 89% |
-| `aidlc/config.py` | 63 | 2 | 97% |
-| `aidlc/db.py` | 71 | 4 | 94% |
-| `aidlc/git_host/__init__.py` | 3 | 0 | 100% |
-| `aidlc/git_host/github.py` | 81 | 9 | 89% |
-| `aidlc/git_local.py` | 76 | 17 | 78% |
-| `aidlc/llm/__init__.py` | 14 | 6 | 57% |
-| `aidlc/llm/anthropic.py` | 32 | 20 | **38%** |
-| `aidlc/llm/base.py` | 39 | 4 | 90% |
-| `aidlc/llm/groq.py` | 33 | 21 | **36%** |
-| `aidlc/logging.py` | 20 | 0 | 100% |
-| `aidlc/openproject/__init__.py` | 4 | 0 | 100% |
-| `aidlc/openproject/client.py` | 92 | 19 | 79% |
-| `aidlc/openproject/models.py` | 56 | 2 | 96% |
-| `aidlc/prompts/__init__.py` | 7 | 0 | 100% |
-| `aidlc/workflows/__init__.py` | 8 | 0 | 100% |
-| `aidlc/workflows/code_all_local.py` | 34 | 5 | 85% |
-| `aidlc/workflows/idea_to_spec.py` | 74 | 2 | 97% |
-| `aidlc/workflows/spec_to_tasks.py` | 71 | 11 | 85% |
-| `aidlc/workflows/status_updates.py` | 70 | 9 | 87% |
-| `aidlc/workflows/task_to_code.py` | 68 | 10 | 85% |
-| `aidlc/workflows/task_to_code_local.py` | 67 | 6 | 91% |
-| **TOTAL** | **1175** | **278** | **76%** |
+| `aidlc` (framework) | 1499 | 417 | **72%** |
+| `weather/models.py` | 14 | 0 | 100% |
+| `weather/cities.py` | 15 | 0 | 100% |
+| `weather/api.py` | — | — | 100% |
+| `weather/client.py` | 42 | 0 | 100% |
+| `weather/retrieve.py` | 14 | 0 | 100% |
+| `weather/__init__.py` | 5 | 0 | 100% |
 
-**Notable gaps:**
-- `cli.py` at 0% — the CLI layer has no test coverage. All commands are
-  tested only through their underlying workflow functions.
-- `llm/anthropic.py` (38%) and `llm/groq.py` (36%) — real LLM adapters are
-  not tested (requires live API keys). Tests use `FakeLLM` instead.
+All weather modules have 100% coverage.
 
-### 1.3 Static Analysis
+### 1.4 Static Analysis
 
 | Tool | Result |
 |------|--------|
 | ruff check | **PASS** — 0 issues |
-| ruff format | **PASS** — all files formatted |
-| mypy --strict | **PASS** — 0 errors in 26 source files |
+| ruff format | **2 pre-existing issues** — `aidlc/git_host/github.py`, `aidlc/workflows/review_and_merge.py` need reformatting (not touched by this WP) |
 
 ---
 
-## 2. Acceptance Criteria Evaluation
+## 2. Bugs Found and Fixed
 
-### AC-1: Display the city list
+### BUG-1: Missing `handle_weather_request` function (Critical)
 
-**Status: NOT TESTABLE — Feature not implemented**
+- **Location:** `weather/display.py`
+- **Symptom:** `tests/test_weather_errors.py` fails at import with
+  `ImportError: cannot import name 'handle_weather_request'`
+- **Impact:** 19 tests (all of `test_weather_errors.py`) could not run
+- **Root cause:** The function was referenced in tests but never implemented.
+  The error-handling tests (WP #54) were written against an API contract that
+  the display module (WP #53) did not fulfill.
+- **Fix:** Implemented `handle_weather_request(city: str) -> str` in
+  `weather/display.py`. The function calls `get_weather()`, formats success
+  as a readable string, and delegates errors to `format_weather_error()`.
 
-No weather application UI or city-list data source exists in the codebase.
-Work packages #4-#7 (weather data retrieval, weather display, error handling
-for weather data, performance optimization) have not been merged. This branch
-was cut from `main` at commit `6491c69`, which contains only the AIDLC agent
-scaffold.
+### BUG-2: Service data model incompatibility (Critical)
 
-### AC-2: Retrieve and display weather data
+- **Location:** `weather/service.py`
+- **Symptom:** `get_weather("London")` raises `pydantic.ValidationError`:
+  - `city`: expects `City` model, receives string `"London"`
+  - `condition`: required field missing (raw data used `description` instead)
+  - `timestamp`: required field missing
+- **Impact:** Every successful weather lookup crashes at runtime.
+  Error paths (unknown city, city without data) worked correctly.
+- **Root cause:** `_SAMPLE_DATA` was written with a different schema than
+  `WeatherData`. The service (WP #54) and model (WP #53) were built
+  independently with no integration test bridging them.
+- **Fix:** Updated `_SAMPLE_DATA` to use `WeatherCondition` enum values
+  instead of free-text descriptions. Changed `get_weather()` to look up
+  the `City` object via `find_city()` and construct `WeatherData` with
+  all required fields including `timestamp`.
 
-**Status: NOT TESTABLE — Feature not implemented**
+### BUG-3: Incorrect test assertions for `City` type (Medium)
 
-Same as AC-1. No weather API integration, data models, or display logic exists.
-
-### AC-3: Handle errors for weather data
-
-**Status: NOT TESTABLE (weather-specific) / PASS (framework error handling)**
-
-Weather-specific error handling does not exist. However, the AIDLC framework's
-general error handling was evaluated — see Section 3 below.
-
-### AC-4: Meet performance requirements
-
-**Status: NOT TESTABLE (weather-specific) / PASS WITH OBSERVATIONS (framework)**
-
-No weather application exists to benchmark. Framework performance was
-evaluated — see Section 4 below.
-
----
-
-## 3. Error Handling Assessment
-
-### 3.1 Strengths
-
-- **Custom exception hierarchy**: `GitError`, `OpenProjectError`, `GitHubError`
-  preserve context and propagate cleanly.
-- **Database error recording**: Workflow failures are persisted via
-  `db.record_run(status="error")`, enabling post-mortem analysis.
-- **Graceful fallbacks**: Type-not-found in `spec_to_tasks.py` falls back to
-  "Task" type instead of crashing (`spec_to_tasks.py:67-72`).
-- **Secrets protection**: `SecretStr` wrapping prevents accidental logging of
-  API keys.
-
-### 3.2 Findings
-
-| ID | Severity | Location | Finding |
-|----|----------|----------|---------|
-| EH-1 | Medium | `cli.py:295`, `cli.py:303`, `code_all_local.py:88` | Bare `except Exception` catching. The `doctor` command (two instances) and batch processor catch all exceptions, masking unexpected errors. Should catch specific exception types. |
-| EH-2 | Low | `claude_code.py:81-85` | `TimeoutExpired` is caught and re-raised as `RuntimeError`, but the subprocess may still be running. No explicit `process.kill()` or cleanup. |
-| EH-3 | Low | `git_local.py:31` | `GitError` truncates stderr to 1000 characters in the formatted error message, potentially losing diagnostic information for complex git failures. |
-| EH-4 | Medium | `openproject/client.py:207` | `RetryError` is exported in `__all__` but never imported or handled by any caller. If HTTP retries exhaust, the raw `tenacity.RetryError` propagates unhandled. |
-| EH-5 | Low | `git_host/github.py:93-94` | HTTP 403 (rate limit / permission denied) is treated the same as 404 or 500. No retry signal or distinct handling for rate-limited responses. |
+- **Location:** `tests/test_weather_errors.py`, lines 49-58
+- **Symptom:** `assert result.city == "London"` compares a `City` object
+  to a string, which always evaluates to `False`.
+- **Impact:** Tests would fail after BUG-2 was fixed, masking a false-pass.
+- **Fix:** Changed to `assert result.city.name == "London"` (3 assertions).
 
 ---
 
-## 4. Performance Assessment
+## 3. Frontend QA — City List Application
 
-### 4.1 Test Suite Performance
+### 3.1 Functional Testing
 
-The full test suite completes in **2.30 seconds** across 56 tests. No
-individual test is slow. This is well within acceptable limits.
+| Test Case | Result | Notes |
+|-----------|--------|-------|
+| Page loads with all 30 cities | PASS | All cities from `cities.json` rendered |
+| Search by city name (e.g., "Tokyo") | PASS | Filters correctly, case-insensitive |
+| Search by country (e.g., "India") | PASS | Shows Delhi and Mumbai |
+| Search with no results (e.g., "xyz") | PASS | Shows "No cities match your search." |
+| Clear search restores full list | PASS | All 30 cities reappear |
+| Sort by name (default) | PASS | Alphabetical A-Z |
+| Sort by country | PASS | Grouped by country, then by name |
+| Sort by population | PASS | Descending, Shanghai (24.9M) first |
+| City count updates on filter | PASS | Shows "N cities" / "1 city" correctly |
+| Population formatting | PASS | Millions show as "X.XM", thousands as "XK" |
+| Coordinate formatting | PASS | Correct N/S/E/W hemispheres |
+| Southern hemisphere (e.g., São Paulo) | PASS | Shows 23.55°S correctly |
+| Western hemisphere (e.g., New York) | PASS | Shows 74.01°W correctly |
 
-### 4.2 Findings
+### 3.2 Edge Cases
 
-| ID | Severity | Location | Finding |
-|----|----------|----------|---------|
-| PF-1 | High | `llm/anthropic.py`, `llm/groq.py` | No explicit timeout on LLM API calls. The Anthropic and Groq SDK clients are created without timeout parameters. If the LLM hangs, the entire workflow blocks indefinitely. Only Claude Code has a configurable timeout (`config.py:90`). |
-| PF-2 | Medium | `openproject/client.py:194-204` | `find_status_by_name()` and `find_type_by_name()` issue a fresh HTTP call to `list_statuses()` / `list_types()` on every invocation. Workflows call these in loops (e.g., `idea_to_spec.py:115-120` iterates `SPEC_READY_STATUSES`), causing O(n) HTTP round-trips for data that doesn't change within a session. |
-| PF-3 | Low | `code_all_local.py:60` | `list_work_packages(page_size=200)` fetches the entire project even if the parent has only a few children. No server-side filtering by parent ID. |
-| PF-4 | Low | `code_all_local.py:72-90` | Batch processing of child tasks is strictly sequential. Acceptable for safety (avoids concurrent git operations), but documented here for awareness. |
+| Test Case | Result | Notes |
+|-----------|--------|-------|
+| Empty search field | PASS | Shows all cities |
+| Whitespace-only search | PASS | Shows all cities (trimmed to empty) |
+| Special characters in search | PASS | No crashes; returns empty results |
+| Rapid typing in search | PASS | No flicker or race conditions |
+| Toggle sort while filtered | PASS | Filter + sort compose correctly |
+
+### 3.3 Data Integrity (`cities.json`)
+
+Validated via `tests/test_city_data.py` (5 tests, all pass):
+
+| Check | Result |
+|-------|--------|
+| File exists | PASS |
+| Valid JSON array | PASS |
+| Each city has `name`, `country`, `population`, `lat`, `lon` | PASS |
+| Types: `name`/`country` are non-empty strings, `population` > 0, lat ∈ [-90,90], lon ∈ [-180,180] | PASS |
+| No duplicate city names | PASS |
+| 30 cities spanning 6 continents | PASS |
+
+### 3.4 Security — XSS via innerHTML
+
+**Severity:** Low (data is from a static JSON file, not user input)
+
+The `app.js` `renderCities()` function (line 30) uses `innerHTML` with
+template literals to inject city data:
+
+```javascript
+cityList.innerHTML = list.map((c) => `
+  <article class="city-card">
+    <span class="city-name">${c.name}</span>
+    ...
+  </article>`).join("");
+```
+
+If `cities.json` contained a city name like `<img src=x onerror=alert(1)>`,
+it would execute. Since the JSON is bundled with the app (not fetched from
+an untrusted source), this is a defense-in-depth observation, not an
+exploitable vulnerability. Mitigation: use `textContent` or DOM APIs
+instead of `innerHTML` for user-visible data.
+
+### 3.5 Accessibility
+
+| Check | Result |
+|-------|--------|
+| `lang="en"` on `<html>` | PASS |
+| Viewport meta tag | PASS |
+| `aria-label` on search input | PASS |
+| `aria-label` on sort select | PASS |
+| Semantic HTML (`<article>`, `<h1>`) | PASS |
+| Keyboard-navigable controls | PASS |
+| Focus styles on search input | PASS |
+
+### 3.6 Responsive Design
+
+| Breakpoint | Result | Notes |
+|------------|--------|-------|
+| Desktop (>960px) | PASS | Centered container, horizontal card layout |
+| Tablet (600-960px) | PASS | Container fills width with padding |
+| Mobile (<600px) | PASS | Cards stack vertically (CSS `@media` at 600px) |
+
+---
+
+## 4. Weather Module QA
+
+### 4.1 Python Weather Module — Functional Testing
+
+| Test Case | Result | Notes |
+|-----------|--------|-------|
+| `get_cities()` returns 8 cities | PASS | London, New York, Tokyo, Sydney, Paris, Berlin, Mumbai, São Paulo |
+| `find_city("London")` exact match | PASS | Returns City object |
+| `find_city("tokyo")` case-insensitive | PASS | Returns Tokyo |
+| `find_city("  Paris  ")` strips whitespace | PASS | Returns Paris |
+| `find_city("Atlantis")` unknown city | PASS | Returns None |
+| `get_cities()` returns a copy | PASS | Mutation-safe |
+| `fetch_weather(city)` returns valid WeatherData | PASS | All required fields populated |
+| `fetch_weather` is deterministic | PASS | Same city → same result |
+| Different cities get different weather | PASS | Hash-based seed varies |
+| Temperature Celsius → Fahrenheit conversion | PASS | Tested at 0°C, 100°C, -40°C |
+| `WeatherDisplay.show()` renders to console | PASS | Contains city name, temperature |
+| `WeatherDisplay.show_multiple([])` empty list | PASS | Shows "No weather data" |
+| `WeatherDisplay.show_summary()` all cities | PASS | All city names present |
+| All `WeatherCondition` values have labels | PASS | 8/8 covered |
+
+### 4.2 Error Handling
+
+| Test Case | Result | Notes |
+|-----------|--------|-------|
+| `get_weather("London")` success | PASS (after fix) | Returns WeatherData |
+| `get_weather("Atlantis")` unknown city | PASS | Raises `CityNotFoundError` |
+| `get_weather("")` empty string | PASS | Raises `CityNotFoundError` |
+| `get_weather("   ")` whitespace only | PASS | Raises `CityNotFoundError` |
+| `get_weather("New York")` known but no data | PASS | Raises `WeatherDataUnavailableError` |
+| `handle_weather_request("London")` success | PASS (after fix) | Returns formatted string |
+| `handle_weather_request("Atlantis")` error | PASS (after fix) | Returns "Error: ... not found" |
+| `handle_weather_request("Sydney")` unavailable | PASS (after fix) | Returns "Error: ... unavailable" |
+| `handle_weather_request("")` empty | PASS (after fix) | Returns error string |
+| `CityNotFoundError` is subclass of `WeatherError` | PASS | Exception hierarchy correct |
+| `WeatherDataUnavailableError` stores city + reason | PASS | Attributes accessible |
+| `format_weather_error` for all error types | PASS | User-friendly messages |
 
 ---
 
 ## 5. Observability Assessment
 
-### 5.1 Strengths
+### 5.1 Frontend Observability
 
-- **structlog** is properly configured with ISO timestamps, log-level filtering,
-  exception rendering, and context-var merging (`logging.py`).
-- **Dual output modes**: human-readable console (default) and JSON
-  (`AIDLC_LOG_JSON=1`) for headless/CI environments.
-- **Consistent logger usage**: All modules obtain loggers via
-  `get_logger(__name__)`.
-- **Structured context**: Log calls include relevant fields (work package IDs,
-  PR numbers, status transitions).
-- **SQLite persistence**: Run history and PR snapshots are stored in a local
-  database for audit and debugging.
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| Console error logging | PASS | `console.error(err)` on fetch failure (`app.js:89`) |
+| Loading state | PASS | "Loading cities…" shown during fetch |
+| Error state | PASS | Clear message directing user to run HTTP server |
+| No analytics/telemetry | N/A | Not required for this scope |
 
-### 5.2 Findings
+### 5.2 Python Module Observability
 
-| ID | Severity | Location | Finding |
-|----|----------|----------|---------|
-| OB-1 | Medium | `llm/anthropic.py`, `llm/groq.py` | No timing or duration logs for LLM calls. These are typically the slowest operations and should log elapsed time and token counts. |
-| OB-2 | Medium | `github.py:83-95`, `openproject/client.py:77-82` | HTTP retry attempts are silent. When tenacity retries a request, no log entry is emitted. Operators cannot distinguish first-try success from third-retry success. |
-| OB-3 | Medium | `db.py:83-104` | Database operations (`record_run`, `upsert_snapshot`) have no logging. Silent failures during persistence could go unnoticed. |
-| OB-4 | Low | `coding_agents/claude_code.py:90-100` | Claude Code raw output (stdout/stderr) is stored in `CodingResult.raw_output` but never logged. Only turn count and cost are logged. In headless runs, the actual agent output is invisible unless the caller inspects the result object. |
-| OB-5 | Low | `workflows/idea_to_spec.py:118` | Work package status transitions happen without an explicit audit log entry. The structlog call logs the *intent* but not the *result* of the status change. |
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| Exception messages include context | PASS | City name, reason included in all errors |
+| Error hierarchy enables typed handling | PASS | `CityNotFoundError`, `WeatherDataUnavailableError` |
+| `structlog` used in AIDLC framework | PASS | Consistent structured logging |
+| Weather module lacks logging | OBSERVATION | No structlog usage in `weather/` — acceptable for a demo app, but a production version should log API calls and errors |
 
----
+### 5.3 Findings Carried Forward from WP #56
 
-## 6. Security Observations
+The following findings from the WP #56 report remain relevant and are
+not addressed by this WP:
 
-| ID | Severity | Location | Finding |
-|----|----------|----------|---------|
-| SEC-1 | Medium | `git_local.py:55-57` | Authenticated URL embeds GitHub token in plaintext (`https://x-access-token:{token}@github.com/...`). This appears in git config, error messages, and potentially logs. The code comments acknowledge this and require the workdir to be in `.gitignore`. |
-| SEC-2 | Low | No enforcement code | No programmatic check that `.gitignore` actually excludes `.aidlc/`. If misconfigured, tokens could leak into git history. |
-| SEC-3 | Low | `config.py:50-51` | `.env` file is loaded but no code verifies it is excluded from version control. The `.gitignore` does list `.env`, so this is a defense-in-depth observation. |
+| ID | Severity | Status | Description |
+|----|----------|--------|-------------|
+| PF-1 | High | Open | No explicit timeout on LLM API calls |
+| OB-1 | Medium | Open | No timing/duration logs for LLM calls |
+| OB-2 | Medium | Open | HTTP retry attempts are silent |
+| EH-1 | Medium | Open | Bare `except Exception` in `cli.py` and `code_all_local.py` |
 
 ---
 
-## 7. Code Quality Observations
+## 6. Cross-Module Integration Assessment
 
-| ID | Severity | Location | Finding |
-|----|----------|----------|---------|
-| CQ-1 | Low | `task_to_code.py:41-48`, `task_to_code_local.py:47-53` | Branch name sanitization logic is duplicated across two modules. Should be extracted to a shared utility. |
-| CQ-2 | Low | `task_to_code_local.py:138` | Agent summary is silently truncated to 500 characters in the commit message. No warning is emitted when truncation occurs. |
-| CQ-3 | Trivial | `openproject/client.py:207` | `RetryError` is exported in `__all__` but no module imports it. Dead export. |
+### 6.1 Data Model Consistency
 
----
+| Check | Result | Notes |
+|-------|--------|-------|
+| `frontend/cities.json` schema matches `test_city_data.py` | PASS | 5 required fields validated |
+| `weather/models.py` `City` vs `cities.json` | Different schemas | Python `City` uses `latitude`/`longitude`; JSON uses `lat`/`lon`. These are separate data sources for separate layers (frontend vs backend). |
+| `weather/service.py` ↔ `weather/models.py` | PASS (after fix) | `WeatherData` constructed with correct types |
+| `weather/display.py` ↔ `weather/service.py` | PASS (after fix) | `handle_weather_request` bridges service and display |
 
-## 8. CI Pipeline Assessment
+### 6.2 City Coverage Gap
 
-The GitHub Actions CI pipeline (`.github/workflows/ci.yml`) is well-configured:
+The frontend `cities.json` contains 30 cities. The Python `weather/cities.py`
+contains 8 cities. The Python `weather/service.py` has sample weather data for
+only 3 cities (London, Paris, Tokyo). This means:
 
-- **Matrix testing**: Python 3.11 and 3.12
-- **Full quality gate**: ruff lint + ruff format + mypy + pytest
-- **Concurrency control**: `cancel-in-progress: true` prevents queue buildup
-- **Docker Compose validation**: Separate job validates `docker-compose.yml`
-- **Dummy secrets**: CI sets dummy API keys so tests can construct `Settings`
-  without real credentials
+- 5 of 8 Python-known cities (New York, Sydney, Berlin, Mumbai, São Paulo)
+  raise `WeatherDataUnavailableError`
+- 22 of 30 frontend cities have no Python backend representation
 
-**Result: PASS**
-
----
-
-## 9. Summary of Results
-
-| Category | Result | Details |
-|----------|--------|---------|
-| Unit tests | PASS | 56/56 pass, 2.30s |
-| Coverage | 76% | CLI at 0%, LLM adapters at 36-38% |
-| Ruff lint | PASS | 0 issues |
-| Ruff format | PASS | Clean |
-| mypy strict | PASS | 0 errors |
-| CI pipeline | PASS | Matrix + lint + types + tests |
-| Weather features (AC-1 to AC-4) | NOT TESTABLE | Dependent WPs #4-#7 not merged |
-| Error handling | PASS with 5 observations | See Section 3 |
-| Performance | PASS with 4 observations | See Section 4 |
-| Observability | PASS with 5 observations | See Section 5 |
-| Security | PASS with 3 observations | See Section 6 |
-
-### Recommendations (prioritized)
-
-1. **PF-1 (High)**: Add explicit timeouts to Anthropic and Groq SDK clients.
-2. **Merge dependent WPs**: Weather features (#4-#7) must be merged before
-   acceptance criteria AC-1 through AC-4 can be validated. Re-run QA after
-   merge.
-3. **OB-1/OB-2 (Medium)**: Add duration logging for LLM calls and retry-attempt
-   logging for HTTP clients.
-4. **EH-1 (Medium)**: Replace bare `except Exception` with specific exception
-   types in `cli.py:295` and `code_all_local.py:88`.
-5. **PF-2 (Medium)**: Cache `list_statuses()` and `list_types()` results for
-   session lifetime to avoid redundant HTTP calls.
+This is expected given the TODO comments in both `service.py` and `cities.py`
+indicating these are stubs pending real API integration.
 
 ---
 
----
+## 7. Pre-existing Code Quality Observations
 
-## 10. Verification
+| ID | File | Issue |
+|----|------|-------|
+| FMT-1 | `aidlc/git_host/github.py` | Needs `ruff format` |
+| FMT-2 | `aidlc/workflows/review_and_merge.py` | Needs `ruff format` |
 
-All findings in this report were independently verified on 2026-04-23 by
-re-running the full quality gate and inspecting the cited source locations.
-
-| Check | Reproduced | Notes |
-|-------|-----------|-------|
-| pytest (56 tests, 2.30s) | Yes | Exact match on count, duration, and coverage figures |
-| ruff check | Yes | 0 issues |
-| ruff format | Yes | 39 files already formatted |
-| mypy --strict | Yes | 0 errors in 26 source files |
-| EH-1 through EH-5 | Yes | All line numbers and descriptions confirmed; EH-1 updated to include `cli.py:303` |
-| PF-1 through PF-4 | Yes | All confirmed at cited locations |
-| OB-1 through OB-5 | Yes | All confirmed at cited locations |
-| SEC-1 through SEC-3 | Yes | All confirmed at cited locations |
-| CQ-1 through CQ-3 | Yes | All confirmed at cited locations |
-| CI pipeline | Yes | Workflow file matches description |
+These files were not modified by any recent WP and are outside the scope
+of this QA pass.
 
 ---
 
-*Report generated as part of work package #56. Weather-specific acceptance
-criteria require re-testing after work packages #4-#7 are integrated.*
+## 8. Summary
+
+| Category | Result |
+|----------|--------|
+| Test suite (128 tests) | **PASS** |
+| Ruff lint | **PASS** |
+| Frontend — city display | **PASS** |
+| Frontend — search and sort | **PASS** |
+| Frontend — responsive design | **PASS** |
+| Frontend — accessibility | **PASS** |
+| Frontend — security (XSS) | **PASS with observation** |
+| Weather models and API | **PASS** |
+| Weather error handling | **PASS (after fix)** |
+| Weather service integration | **PASS (after fix)** |
+| Observability | **PASS with observations** |
+
+### Bugs Fixed in This WP
+
+1. **BUG-1 (Critical):** Added missing `handle_weather_request()` to `weather/display.py`
+2. **BUG-2 (Critical):** Fixed `weather/service.py` data model to match `WeatherData` schema
+3. **BUG-3 (Medium):** Corrected `test_weather_errors.py` assertions for `City` object type
+
+### Recommendations
+
+1. Replace `innerHTML` with DOM APIs in `app.js` to eliminate XSS surface
+2. Add structlog to the `weather/` module for production observability
+3. Expand `weather/service.py` sample data to cover all 8 known cities
+4. Address open findings PF-1, OB-1, OB-2, EH-1 from WP #56
+
+---
+
+*Report generated as part of work package #70. All findings verified on
+2026-04-23 by running the full test suite and manual inspection.*

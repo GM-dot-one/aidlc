@@ -10,7 +10,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from weather.cities import find_city
-from weather.errors import CityNotFoundError, WeatherDataUnavailableError
+from weather.errors import (
+    APIUnavailableError,
+    CityNotFoundError,
+    WeatherDataUnavailableError,
+)
 from weather.models import WeatherCondition, WeatherData
 
 _SAMPLE_DATA: dict[str, dict[str, Any]] = {
@@ -36,6 +40,14 @@ _SAMPLE_DATA: dict[str, dict[str, Any]] = {
 
 KNOWN_CITIES: set[str] = {"london", "paris", "tokyo", "new york", "sydney", "berlin"}
 
+_api_available: bool = True
+
+
+def set_api_available(available: bool) -> None:
+    """Control simulated API availability (for testing)."""
+    global _api_available  # noqa: PLW0603
+    _api_available = available
+
 
 def get_weather(city: str) -> WeatherData:
     """Retrieve weather data for a city, raising descriptive errors on failure.
@@ -43,7 +55,11 @@ def get_weather(city: str) -> WeatherData:
     Raises:
         CityNotFoundError: If the city is not recognised.
         WeatherDataUnavailableError: If the city is known but has no weather data.
+        APIUnavailableError: If the weather service is unreachable.
     """
+    if not _api_available:
+        raise APIUnavailableError("weather service is unavailable")
+
     if not city or not city.strip():
         raise CityNotFoundError(city)
 

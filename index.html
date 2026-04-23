@@ -1182,7 +1182,14 @@
   /* ─── Handle form submit: geocode if needed ─────────────────── */
   async function handleFormSubmit(query) {
     query = query.trim();
-    if (!query) return;
+    if (!query) {
+      showError("Please enter a city name to search for weather.", "notfound");
+      return;
+    }
+    if (query.length > 200) {
+      showError("City name is too long. Please enter a valid city name.", "notfound");
+      return;
+    }
 
     // Use highlighted or first suggestion if available
     var targetSuggestion = null;

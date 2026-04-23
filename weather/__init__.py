@@ -5,11 +5,12 @@ Built as a demo product through the AI-DLC workflow.
 
 from __future__ import annotations
 
-from weather.errors import CityNotFoundError, WeatherDataUnavailableError
+from weather.errors import APIUnavailableError, CityNotFoundError, WeatherDataUnavailableError
 from weather.models import WeatherData
 from weather.service import get_weather
 
 __all__ = [
+    "APIUnavailableError",
     "CityNotFoundError",
     "WeatherData",
     "WeatherDataUnavailableError",

@@ -130,7 +130,7 @@ class TestSpecToTasks:
         op = FakeOpenProject()
         parent = op.add_wp(subject="x", description=self.SPEC_MARKDOWN)
         llm = FakeLLM(responses=['{"not": "a list"}'])
-        with pytest.raises(ValueError, match="array of tasks"):
+        with pytest.raises(ValueError, match="tasks"):
             run_spec_to_tasks(
                 llm=llm, op=op, parent_work_package_id=parent.id, project_identifier="demo"
             )

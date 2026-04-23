@@ -3,33 +3,370 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>City List</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Weather App</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 640px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      color: rgba(255,255,255,0.8);
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 0.875rem 1.25rem;
+      border: none;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      transition: box-shadow 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    }
+
+    .search-btn {
+      padding: 0.875rem 1.5rem;
+      border: none;
+      border-radius: 0.75rem;
+      background: #fff;
+      color: #667eea;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+
+    .search-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+    .search-btn:active { transform: translateY(0); }
+
+    .weather-card {
+      background: #fff;
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .weather-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .weather-location { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; }
+    .weather-desc { color: #6b7280; font-size: 0.95rem; }
+
+    .weather-temp-block { text-align: right; }
+    .weather-temp { font-size: 3rem; font-weight: 700; color: #667eea; line-height: 1; }
+    .weather-feels { font-size: 0.85rem; color: #9ca3af; margin-top: 0.25rem; }
+
+    .weather-icon { font-size: 4rem; line-height: 1; }
+
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .weather-stat { display: flex; flex-direction: column; }
+    .weather-stat-label { font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    .weather-stat-value { font-size: 1.1rem; font-weight: 600; color: #374151; margin-top: 0.125rem; }
+
+    .unit-toggle {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .unit-btn {
+      padding: 0.375rem 0.875rem;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 2rem;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .unit-btn.active {
+      background: #fff;
+      color: #667eea;
+      border-color: #fff;
+    }
+
+    .message {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: rgba(255,255,255,0.8);
+      font-size: 1rem;
+      background: rgba(255,255,255,0.1);
+      border-radius: 1rem;
+      backdrop-filter: blur(4px);
+    }
+
+    .message.error { color: #fca5a5; background: rgba(220,38,38,0.15); }
+
+    .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .recent-searches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .recent-btn {
+      padding: 0.25rem 0.75rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 2rem;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.9);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .recent-btn:hover { background: rgba(255,255,255,0.25); }
+
+    @media (max-width: 480px) {
+      .weather-header { flex-direction: column; text-align: center; }
+      .weather-temp-block { text-align: center; }
+      .search-form { flex-direction: column; }
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>City List</h1>
-    <p class="subtitle">Major cities worldwide — search, sort, and browse.</p>
+    <h1>Weather</h1>
+    <p class="subtitle">Search for any city in the world</p>
 
-    <div class="controls">
-      <input
-        type="search"
-        id="search"
-        class="search-input"
-        placeholder="Search by city or country…"
-        aria-label="Search cities"
-      >
-      <select id="sort" class="sort-select" aria-label="Sort cities">
-        <option value="name">Sort by name</option>
-        <option value="country">Sort by country</option>
-        <option value="population">Sort by population</option>
-      </select>
+    <div class="unit-toggle">
+      <button class="unit-btn active" data-unit="C">°C</button>
+      <button class="unit-btn" data-unit="F">°F</button>
     </div>
 
-    <p id="city-count" class="city-count"></p>
-    <div id="city-list" class="city-list"></div>
+    <form class="search-form" id="search-form">
+      <input
+        type="text"
+        id="search"
+        class="search-input"
+        placeholder="Enter a city name…"
+        autocomplete="off"
+        autofocus
+      >
+      <button type="submit" class="search-btn">Search</button>
+    </form>
+
+    <div id="recent" class="recent-searches"></div>
+    <div id="result"></div>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    const searchForm = document.getElementById("search-form");
+    const searchInput = document.getElementById("search");
+    const resultDiv = document.getElementById("result");
+    const recentDiv = document.getElementById("recent");
+
+    let unit = "C";
+    let lastData = null;
+    let recentSearches = JSON.parse(localStorage.getItem("weatherRecent") || "[]");
+
+    const weatherEmoji = {
+      "113": "☀️", "116": "⛅", "119": "☁️", "122": "☁️",
+      "143": "🌫️", "176": "🌦️", "179": "🌨️", "182": "🌨️",
+      "185": "🌨️", "200": "⛈️", "227": "🌨️", "230": "❄️",
+      "248": "🌫️", "260": "🌫️", "263": "🌦️", "266": "🌧️",
+      "281": "🌨️", "284": "🌨️", "293": "🌦️", "296": "🌧️",
+      "299": "🌧️", "302": "🌧️", "305": "🌧️", "308": "🌧️",
+      "311": "🌨️", "314": "🌨️", "317": "🌨️", "320": "🌨️",
+      "323": "🌨️", "326": "🌨️", "329": "❄️", "332": "❄️",
+      "335": "❄️", "338": "❄️", "350": "🌨️", "353": "🌦️",
+      "356": "🌧️", "359": "🌧️", "362": "🌨️", "365": "🌨️",
+      "368": "🌨️", "371": "❄️", "374": "🌨️", "377": "🌨️",
+      "386": "⛈️", "389": "⛈️", "392": "⛈️", "395": "❄️",
+    };
+
+    function renderRecent() {
+      recentDiv.innerHTML = recentSearches
+        .map(c => `<button class="recent-btn" data-city="${c}">${c}</button>`)
+        .join("");
+    }
+
+    function addRecent(city) {
+      const name = city.trim();
+      recentSearches = [name, ...recentSearches.filter(c => c.toLowerCase() !== name.toLowerCase())].slice(0, 8);
+      localStorage.setItem("weatherRecent", JSON.stringify(recentSearches));
+      renderRecent();
+    }
+
+    function windDir(deg) {
+      const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+      return dirs[Math.round(deg / 22.5) % 16];
+    }
+
+    function renderWeather(data) {
+      const cur = data.current_condition[0];
+      const area = data.nearest_area[0];
+      const cityName = area.areaName[0].value;
+      const country = area.country[0].value;
+      const region = area.region[0].value;
+
+      const tempC = parseInt(cur.temp_C);
+      const tempF = parseInt(cur.temp_F);
+      const feelsC = parseInt(cur.FeelsLikeC);
+      const feelsF = parseInt(cur.FeelsLikeF);
+      const temp = unit === "C" ? `${tempC}°C` : `${tempF}°F`;
+      const feels = unit === "C" ? `${feelsC}°C` : `${feelsF}°F`;
+
+      const code = cur.weatherCode;
+      const emoji = weatherEmoji[code] || "🌡️";
+      const desc = cur.weatherDesc[0].value;
+      const humidity = cur.humidity;
+      const windKmph = cur.windspeedKmph;
+      const windMph = cur.windspeedMiles;
+      const windDeg = parseInt(cur.winddirDegree);
+      const wind = unit === "C"
+        ? `${windKmph} km/h ${windDir(windDeg)}`
+        : `${windMph} mph ${windDir(windDeg)}`;
+      const uv = cur.uvIndex;
+      const visibility = unit === "C" ? `${cur.visibility} km` : `${cur.visibilityMiles} mi`;
+      const pressure = cur.pressure + " hPa";
+      const precip = unit === "C" ? `${cur.precipMM} mm` : `${cur.precipInches} in`;
+
+      const location = region && region !== cityName
+        ? `${cityName}, ${region}, ${country}`
+        : `${cityName}, ${country}`;
+
+      addRecent(cityName);
+
+      resultDiv.innerHTML = `
+        <div class="weather-card">
+          <div class="weather-header">
+            <div>
+              <div class="weather-location">${location}</div>
+              <div class="weather-desc">${emoji} ${desc}</div>
+            </div>
+            <div class="weather-temp-block">
+              <div class="weather-temp">${temp}</div>
+              <div class="weather-feels">Feels like ${feels}</div>
+            </div>
+          </div>
+          <div class="weather-grid">
+            <div class="weather-stat">
+              <span class="weather-stat-label">Humidity</span>
+              <span class="weather-stat-value">${humidity}%</span>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-label">Wind</span>
+              <span class="weather-stat-value">${wind}</span>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-label">UV Index</span>
+              <span class="weather-stat-value">${uv}</span>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-label">Visibility</span>
+              <span class="weather-stat-value">${visibility}</span>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-label">Pressure</span>
+              <span class="weather-stat-value">${pressure}</span>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-label">Precipitation</span>
+              <span class="weather-stat-value">${precip}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function fetchWeather(city) {
+      resultDiv.innerHTML = '<div class="message"><span class="loading"></span> Fetching weather…</div>';
+
+      try {
+        const resp = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);
+        if (!resp.ok) throw new Error(`City not found (${resp.status})`);
+        lastData = await resp.json();
+        renderWeather(lastData);
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="message error">Could not find weather for "<strong>${city}</strong>". Check the city name and try again.</div>`;
+      }
+    }
+
+    searchForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const city = searchInput.value.trim();
+      if (city) fetchWeather(city);
+    });
+
+    recentDiv.addEventListener("click", (e) => {
+      if (e.target.dataset.city) {
+        searchInput.value = e.target.dataset.city;
+        fetchWeather(e.target.dataset.city);
+      }
+    });
+
+    document.querySelectorAll(".unit-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".unit-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        unit = btn.dataset.unit;
+        if (lastData) renderWeather(lastData);
+      });
+    });
+
+    renderRecent();
+  </script>
 </body>
 </html>

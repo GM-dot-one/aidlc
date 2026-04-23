@@ -166,7 +166,12 @@ def test_run_code_all_local_iterates_children(origin: Path, tmp_path: Path) -> N
     op.list_work_packages = _list  # type: ignore[attr-defined]
 
     gh = FakeGitHub()
-    agent = FakeCodingAgent(files_to_write=[("f.py", "x=1\n")])
+    agent = FakeCodingAgent(
+        files_per_call=[
+            [("a.py", "x=1\n")],
+            [("b.py", "y=2\n")],
+        ],
+    )
 
     result = run_code_all_local(
         agent=agent,
@@ -183,3 +188,5 @@ def test_run_code_all_local_iterates_children(origin: Path, tmp_path: Path) -> N
     assert len(result.successes) == 2
     assert len(result.failures) == 0
     assert {r.work_package_id for r in result.successes} == {c1.id, c2.id}
+    assert result.pr_number >= 100
+    assert len(gh.prs) == 1

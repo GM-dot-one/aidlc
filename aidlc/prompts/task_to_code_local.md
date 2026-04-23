@@ -12,20 +12,44 @@ answer clarifying questions. Make reasonable judgement calls and proceed.
 
 $description
 
+## Parent feature
+
+**Original request:** $parent_subject
+
+$parent_spec
+
+## Shared design context
+
+$shared_context
+
+## All tasks in this feature
+
+$sibling_tasks
+
+## What previous tasks already built
+
+$prior_work_summary
+
 ## Context
 
 - You are at the root of a freshly checked-out clone of `$repo` on feature
   branch `$branch`, cut from `$base_branch`.
 - Stack hints (informational, verify by inspecting the repo):
   $hints
-- A reviewer will see your changes as a **draft pull request**, so focus on
-  producing clean, reviewable diffs — not production-deployed code.
+- A reviewer will see your changes as part of a pull request, so focus on
+  producing clean, reviewable diffs.
+- **You are building part of a larger feature.** Read the shared design
+  context and sibling tasks above carefully. Your code must integrate with
+  what previous tasks have already built and what later tasks will build.
+  Follow the file structure, naming conventions, and interfaces described
+  in the shared context.
 
 ## How to approach this
 
 1. First, explore the repo to understand its layout, conventions, test
-   framework, and package manager. Don't assume.
-2. Implement the task in small, coherent changes.
+   framework, and package manager. Pay special attention to files created
+   by previous tasks in this feature.
+2. Implement the task, building on top of what already exists.
 3. If the repo has a test suite, add or update tests covering what you
    changed. Run them and iterate until they pass.
 4. If something blocks you (missing dependency, ambiguous requirement),
@@ -38,7 +62,8 @@ $description
 
 - Do **not** commit, push, or open PRs. The orchestrator handles git.
 - Do **not** create branches — you are already on the right one.
-- Do **not** rewrite unrelated code or "clean up" the repo.
+- Do **not** rewrite code from previous tasks unless your task specifically
+  requires it. Build on what exists.
 - Do **not** add dependencies unless the task genuinely requires them.
 
 ## When you are done

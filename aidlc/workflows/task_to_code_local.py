@@ -65,6 +65,13 @@ def run_task_to_code_local(
     workdir_root: Path,
     stack_hints: str = "(inspect the repo to determine the stack)",
     force: bool = False,
+    parent_subject: str = "",
+    parent_spec: str = "",
+    sibling_tasks: str = "",
+    shared_context: str = "",
+    prior_work_summary: str = "",
+    checkout_override: "git_local.RepoCheckout | None" = None,
+    skip_push_and_pr: bool = False,
 ) -> TaskToCodeLocalResult:
     """Drive a single task work package through local code-gen + PR."""
     if not force and db.has_run("task_to_code_local", work_package_id):
@@ -88,15 +95,19 @@ def run_task_to_code_local(
 
     branch = _sanitize_branch(f"aidlc/wp-{wp.id}-{wp.subject.lower()}")
 
-    # 1. Prepare a fresh clone on the feature branch.
-    checkout = git_local.prepare_branch(
-        workdir_root=workdir_root,
-        repo=repo,
-        token=github_token,
-        base_branch=base_branch,
-        branch=branch,
-        task_id=wp.id,
-    )
+    # 1. Prepare a fresh clone on the feature branch (or reuse a cumulative checkout).
+    if checkout_override is not None:
+        checkout = checkout_override
+        branch = checkout.branch
+    else:
+        checkout = git_local.prepare_branch(
+            workdir_root=workdir_root,
+            repo=repo,
+            token=github_token,
+            base_branch=base_branch,
+            branch=branch,
+            task_id=wp.id,
+        )
 
     # 2. Render the prompt and hand off to the coding agent.
     prompt = render(
@@ -108,6 +119,11 @@ def run_task_to_code_local(
         branch=branch,
         base_branch=base_branch,
         hints=stack_hints,
+        parent_subject=parent_subject or "(not available)",
+        parent_spec=parent_spec or "(not available)",
+        sibling_tasks=sibling_tasks or "(this is a standalone task)",
+        shared_context=shared_context or "(no shared design context provided)",
+        prior_work_summary=prior_work_summary or "(this is the first task — nothing built yet)",
     )
     try:
         result: CodingResult = agent.implement(prompt=prompt, workdir=checkout.path)
@@ -134,12 +150,29 @@ def run_task_to_code_local(
     files = git_local.changed_files(checkout)
     log.info("task_to_code_local.agent_done", files=len(files), turns=result.turns)
 
-    # 3. Commit + push.
+    # 3. Commit.
     commit_msg = f"feat(wp-{wp.id}): {wp.subject}\n\n{result.summary[:500]}"
     git_local.commit_all(checkout=checkout, message=commit_msg)
-    git_local.push_branch(checkout)
 
-    # 4. Open draft PR via the existing GitHubClient.
+    if skip_push_and_pr:
+        db.record_run(
+            stage="task_to_code_local",
+            work_package_id=wp.id,
+            status="ok",
+            branch_name=branch,
+            notes=f"agent={agent.name} files={len(files)} turns={result.turns} (cumulative, PR deferred)",
+        )
+        return TaskToCodeLocalResult(
+            work_package_id=wp.id,
+            branch=branch,
+            pr_number=0,
+            pr_url="",
+            changed_files=files,
+            agent_summary=result.summary,
+        )
+
+    # 4. Push + open draft PR.
+    git_local.push_branch(checkout)
     pr_title = f"[WP-{wp.id}] {wp.subject}"
     pr_body = _build_pr_body(wp_id=wp.id, result=result, files=files, agent=agent.name)
     pr: PullRequest = gh.open_pull_request(

@@ -203,10 +203,12 @@ def code_all_local(
     table.add_column("Outcome")
     table.add_column("Detail")
     for ok in result.successes:
-        table.add_row(str(ok.work_package_id), "[green]✓ PR[/]", f"#{ok.pr_number} {ok.pr_url}")
+        table.add_row(str(ok.work_package_id), "[green]✓ coded[/]", f"{len(ok.changed_files)} files")
     for wp_id, err in result.failures:
         table.add_row(str(wp_id), "[red]✗ failed[/]", err[:120])
     console.print(table)
+    if result.pr_url:
+        console.print(f"[green]✓ Cumulative PR #{result.pr_number}[/]: {result.pr_url}")
     console.print(f"[bold]Done:[/] {len(result.successes)} ok, {len(result.failures)} failed")
 
 

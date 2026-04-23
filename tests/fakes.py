@@ -61,16 +61,23 @@ class FakeCodingAgent:
     name: str = "fake-agent"
     summary: str = "implemented task"
     files_to_write: list[tuple[str, str]] = field(default_factory=list)
+    files_per_call: list[list[tuple[str, str]]] | None = None
     turns: int | None = 3
     cost_usd: float | None = 0.01
     calls: list[dict[str, Any]] = field(default_factory=list)
     raise_on_invoke: Exception | None = None
 
     def implement(self, *, prompt: str, workdir: Path) -> CodingResult:
+        call_idx = len(self.calls)
         self.calls.append({"prompt": prompt, "workdir": str(workdir)})
         if self.raise_on_invoke is not None:
             raise self.raise_on_invoke
-        for rel, content in self.files_to_write:
+        files = (
+            self.files_per_call[call_idx]
+            if self.files_per_call and call_idx < len(self.files_per_call)
+            else self.files_to_write
+        )
+        for rel, content in files:
             target = workdir / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content)

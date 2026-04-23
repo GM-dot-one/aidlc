@@ -145,6 +145,19 @@ def get_snapshot(work_package_id: int) -> StatusSnapshot | None:
         return session.get(StatusSnapshot, work_package_id)
 
 
+def get_run_notes(stage: str, work_package_id: int) -> str | None:
+    """Retrieve the notes from the last successful run of a given stage."""
+    with Session(get_engine()) as session:
+        run = session.exec(
+            select(WorkflowRun)
+            .where(WorkflowRun.stage == stage)
+            .where(WorkflowRun.work_package_id == work_package_id)
+            .where(WorkflowRun.status == "ok")
+            .order_by(WorkflowRun.created_at.desc())  # type: ignore[union-attr]
+        ).first()
+    return run.notes if run else None
+
+
 def set_db_path_for_tests(path: Path) -> None:
     """Helper so pytest can point the engine at a temp DB."""
     from aidlc.config import get_settings as _gs

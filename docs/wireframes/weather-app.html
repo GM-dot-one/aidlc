@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather App — UI Wireframe</title>
+<style>
+  :root {
+    --bg-primary: #f0f4f8;
+    --bg-card: #ffffff;
+    --accent: #3b82f6;
+    --accent-light: #dbeafe;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --danger: #ef4444;
+    --border: #e2e8f0;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ────────────────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .logo svg { width: 28px; height: 28px; }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    gap: 8px;
+    width: 220px;
+    transition: border-color 0.15s;
+  }
+
+  .search-box:focus-within { border-color: var(--accent); }
+  .search-box input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    width: 100%;
+    color: var(--text-primary);
+  }
+
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: background 0.15s, color 0.15s;
+  }
+  .icon-btn:hover { background: var(--bg-primary); color: var(--text-primary); }
+
+  /* ── Unit Toggle ───────────────────────────────────────────── */
+  .unit-toggle {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .unit-toggle button {
+    padding: 6px 12px;
+    border: none;
+    background: var(--bg-card);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: background 0.15s, color 0.15s;
+  }
+  .unit-toggle button.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  /* ── Main Layout ───────────────────────────────────────────── */
+  .app {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── City List Panel ───────────────────────────────────────── */
+  .city-panel {
+    width: 300px;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .city-panel-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .city-panel-header h2 {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+
+  .add-city-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px dashed var(--border);
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .add-city-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  .city-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    list-style: none;
+  }
+
+  .city-card {
+    padding: 14px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .city-card:hover { background: var(--bg-primary); }
+  .city-card.selected {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+  }
+
+  .city-card-info h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .city-card-info span {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .city-card-temp {
+    text-align: right;
+  }
+  .city-card-temp .temp {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .city-card-temp .condition {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .city-card .delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .city-card:hover .delete-btn { display: flex; }
+  .city-card .delete-btn:hover { background: var(--danger); color: white; }
+
+  /* ── Weather Display Panel ─────────────────────────────────── */
+  .weather-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 40px;
+  }
+
+  .weather-header {
+    margin-bottom: 32px;
+  }
+  .weather-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .weather-header .updated {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .current-weather {
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    color: white;
+    border-radius: var(--radius);
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 24px;
+  }
+
+  .current-weather .weather-icon {
+    font-size: 80px;
+    line-height: 1;
+  }
+
+  .current-weather .temp-block {
+    text-align: right;
+  }
+  .current-weather .temp-value {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .current-weather .condition-label {
+    font-size: 20px;
+    font-weight: 500;
+    opacity: 0.9;
+    margin-top: 4px;
+  }
+  .current-weather .feels-like {
+    font-size: 14px;
+    opacity: 0.75;
+    margin-top: 8px;
+  }
+
+  /* ── Detail Cards ──────────────────────────────────────────── */
+  .detail-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .detail-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .detail-card .detail-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .detail-card .detail-value {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .detail-card .detail-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Forecast ──────────────────────────────────────────────── */
+  .forecast-section h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .forecast-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+
+  .forecast-day {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 20px 12px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .forecast-day:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .forecast-day .day-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+  }
+  .forecast-day .day-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+  }
+  .forecast-day .day-temp {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .forecast-day .day-temp-low {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* ── Empty State ───────────────────────────────────────────── */
+  .empty-state {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+  }
+  .empty-state .empty-icon { font-size: 64px; margin-bottom: 16px; }
+  .empty-state h2 { font-size: 20px; color: var(--text-primary); margin-bottom: 8px; }
+  .empty-state p { font-size: 14px; margin-bottom: 24px; }
+  .empty-state button {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .empty-state button:hover { background: #2563eb; }
+
+  /* ── Wireframe Banner ──────────────────────────────────────── */
+  .wireframe-banner {
+    background: #fef3c7;
+    border-bottom: 1px solid #fcd34d;
+    padding: 8px 24px;
+    font-size: 12px;
+    color: #92400e;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Modal (Add City) ──────────────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.visible { display: flex; }
+
+  .modal {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal h2 { font-size: 18px; margin-bottom: 16px; }
+  .modal input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    margin-bottom: 12px;
+  }
+  .modal input:focus { border-color: var(--accent); }
+
+  .modal-suggestions {
+    list-style: none;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .modal-suggestions li {
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.1s;
+  }
+  .modal-suggestions li:hover { background: var(--accent-light); }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+  .modal-footer button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  /* ── Mobile ────────────────────────────────────────────────── */
+  @media (max-width: 767px) {
+    .app { flex-direction: column; }
+    .city-panel {
+      width: 100%;
+      max-height: 40vh;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .weather-panel { padding: 20px; }
+    .current-weather { padding: 24px; flex-direction: column; text-align: center; gap: 16px; }
+    .current-weather .temp-block { text-align: center; }
+    .current-weather .temp-value { font-size: 48px; }
+    .detail-row { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .forecast-row { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .forecast-day { padding: 12px 6px; }
+    .search-box { width: 140px; }
+  }
+
+  @media (max-width: 480px) {
+    .forecast-row { grid-template-columns: repeat(3, 1fr); }
+    .detail-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Wireframe notice -->
+<div class="wireframe-banner">
+  WIREFRAME PROTOTYPE — WP #50: Weather App UI Design (interactive mockup, not production code)
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    Weather App
+  </div>
+  <div class="header-actions">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" placeholder="Search cities..." aria-label="Search cities">
+    </div>
+    <div class="unit-toggle" role="radiogroup" aria-label="Temperature unit">
+      <button class="active" role="radio" aria-checked="true" id="btn-c">°C</button>
+      <button role="radio" aria-checked="false" id="btn-f">°F</button>
+    </div>
+    <button class="icon-btn" aria-label="Settings" title="Settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83
+          2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0
+          0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9
+          19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1
+          1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68
+          15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1
+          0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65
+          0 0 0-.33-1.82l-.06-.06a2 2 0 1 1
+          2.83-2.83l.06.06A1.65 1.65 0 0 0 9
+          4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0
+          1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65
+          1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1
+          2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33
+          1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65
+          1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- Main Layout -->
+<div class="app">
+
+  <!-- City List -->
+  <aside class="city-panel">
+    <div class="city-panel-header">
+      <h2>My Cities</h2>
+      <button class="add-city-btn" id="add-city-trigger" aria-label="Add a new city">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add City
+      </button>
+    </div>
+    <ul class="city-list" role="listbox" aria-label="Saved cities" id="city-list">
+      <!-- populated by JS -->
+    </ul>
+  </aside>
+
+  <!-- Weather Display -->
+  <main class="weather-panel" id="weather-panel">
+    <!-- filled by JS on selection -->
+  </main>
+
+  <!-- Empty State (shown when no cities) -->
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon" aria-hidden="true">&#127326;</div>
+    <h2>No cities added yet</h2>
+    <p>Add a city to see its current weather and forecast.</p>
+    <button id="empty-add-btn">Add Your First City</button>
+  </div>
+</div>
+
+<!-- Add City Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" role="dialog" aria-label="Add a city">
+    <h2>Add a City</h2>
+    <input type="text" id="city-search-input" placeholder="Type a city name..."
+           aria-label="City name">
+    <ul class="modal-suggestions" id="modal-suggestions">
+      <li data-city="berlin">Berlin, Germany</li>
+      <li data-city="sydney">Sydney, Australia</li>
+      <li data-city="mumbai">Mumbai, India</li>
+      <li data-city="cairo">Cairo, Egypt</li>
+      <li data-city="saopaulo">S&atilde;o Paulo, Brazil</li>
+    </ul>
+    <div class="modal-footer">
+      <button id="modal-close">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var useFahrenheit = false;
+
+  var CITIES = [
+    { id: "london",   name: "London",   country: "United Kingdom", tempC: 12, condition: "Cloudy",        icon: "☁️", humidity: 78, windKph: 18,  pressureHpa: 1012, forecast: [{d:"Mon",hi:13,lo:8,ic:"☁️"},{d:"Tue",hi:15,lo:9,ic:"⛅"},{d:"Wed",hi:14,lo:7,ic:"🌧️"},{d:"Thu",hi:12,lo:6,ic:"🌧️"},{d:"Fri",hi:14,lo:8,ic:"⛅"}] },
+    { id: "paris",    name: "Paris",    country: "France",         tempC: 18, condition: "Sunny",          icon: "☀️", humidity: 52, windKph: 10,  pressureHpa: 1018, forecast: [{d:"Mon",hi:19,lo:12,ic:"☀️"},{d:"Tue",hi:21,lo:13,ic:"☀️"},{d:"Wed",hi:20,lo:11,ic:"⛅"},{d:"Thu",hi:18,lo:10,ic:"☁️"},{d:"Fri",hi:17,lo:9,ic:"🌧️"}] },
+    { id: "tokyo",    name: "Tokyo",    country: "Japan",          tempC: 22, condition: "Partly Cloudy",  icon: "⛅",       humidity: 65, windKph: 12,  pressureHpa: 1013, forecast: [{d:"Mon",hi:23,lo:17,ic:"⛅"},{d:"Tue",hi:25,lo:18,ic:"☀️"},{d:"Wed",hi:24,lo:17,ic:"☀️"},{d:"Thu",hi:21,lo:15,ic:"🌧️"},{d:"Fri",hi:20,lo:14,ic:"☁️"}] },
+    { id: "newyork",  name: "New York", country: "United States",  tempC: 15, condition: "Rain",           icon: "🌧️", humidity: 82, windKph: 22,  pressureHpa: 1008, forecast: [{d:"Mon",hi:16,lo:10,ic:"🌧️"},{d:"Tue",hi:18,lo:11,ic:"⛅"},{d:"Wed",hi:20,lo:12,ic:"☀️"},{d:"Thu",hi:19,lo:11,ic:"☀️"},{d:"Fri",hi:17,lo:10,ic:"☁️"}] }
+  ];
+
+  var selectedId = "london";
+
+  function cToF(c) { return Math.round(c * 9 / 5 + 32); }
+  function tempStr(c) { return useFahrenheit ? cToF(c) + "°F" : c + "°C"; }
+  function feelsLike(c) { return tempStr(c - 2); }
+
+  function renderCityList() {
+    var ul = document.getElementById("city-list");
+    ul.innerHTML = "";
+    CITIES.forEach(function (city) {
+      var li = document.createElement("li");
+      li.className = "city-card" + (city.id === selectedId ? " selected" : "");
+      li.setAttribute("role", "option");
+      li.setAttribute("aria-selected", city.id === selectedId ? "true" : "false");
+      li.innerHTML =
+        '<div class="city-card-info"><h3>' + city.name + '</h3><span>' + city.country + '</span></div>' +
+        '<div class="city-card-temp"><div class="temp">' + tempStr(city.tempC) + '</div>' +
+        '<div class="condition">' + city.icon + ' ' + city.condition + '</div></div>' +
+        '<button class="delete-btn" title="Remove ' + city.name + '" aria-label="Remove ' + city.name + '">&times;</button>';
+
+      li.addEventListener("click", function (e) {
+        if (e.target.closest(".delete-btn")) {
+          CITIES = CITIES.filter(function (c) { return c.id !== city.id; });
+          if (selectedId === city.id) selectedId = CITIES.length ? CITIES[0].id : null;
+          render();
+          return;
+        }
+        selectedId = city.id;
+        render();
+      });
+      ul.appendChild(li);
+    });
+  }
+
+  function renderWeather() {
+    var panel = document.getElementById("weather-panel");
+    var empty = document.getElementById("empty-state");
+
+    if (!CITIES.length || !selectedId) {
+      panel.style.display = "none";
+      empty.style.display = "flex";
+      return;
+    }
+    panel.style.display = "";
+    empty.style.display = "none";
+
+    var city = CITIES.find(function (c) { return c.id === selectedId; });
+    if (!city) return;
+
+    var forecastHtml = city.forecast.map(function (f) {
+      return '<div class="forecast-day">' +
+        '<div class="day-label">' + f.d + '</div>' +
+        '<div class="day-icon">' + f.ic + '</div>' +
+        '<div class="day-temp">' + tempStr(f.hi) + '</div>' +
+        '<div class="day-temp-low">' + tempStr(f.lo) + '</div></div>';
+    }).join("");
+
+    panel.innerHTML =
+      '<div class="weather-header">' +
+        '<h1>' + city.name + ', ' + city.country + '</h1>' +
+        '<div class="updated">Last updated: 2 minutes ago</div>' +
+      '</div>' +
+      '<div class="current-weather">' +
+        '<div class="weather-icon" aria-label="' + city.condition + '">' + city.icon + '</div>' +
+        '<div class="temp-block">' +
+          '<div class="temp-value">' + tempStr(city.tempC) + '</div>' +
+          '<div class="condition-label">' + city.condition + '</div>' +
+          '<div class="feels-like">Feels like ' + feelsLike(city.tempC) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="detail-row">' +
+        '<div class="detail-card"><div class="detail-icon">💧</div>' +
+          '<div class="detail-value">' + city.humidity + '%</div>' +
+          '<div class="detail-label">Humidity</div></div>' +
+        '<div class="detail-card"><div class="detail-icon">🌬️</div>' +
+          '<div class="detail-value">' + city.windKph + ' kph</div>' +
+          '<div class="detail-label">Wind</div></div>' +
+        '<div class="detail-card"><div class="detail-icon">📈</div>' +
+          '<div class="detail-value">' + city.pressureHpa + '</div>' +
+          '<div class="detail-label">Pressure (hPa)</div></div>' +
+      '</div>' +
+      '<div class="forecast-section"><h2>5-Day Forecast</h2>' +
+        '<div class="forecast-row">' + forecastHtml + '</div></div>';
+  }
+
+  function render() { renderCityList(); renderWeather(); }
+
+  // Unit toggle
+  document.getElementById("btn-c").addEventListener("click", function () {
+    useFahrenheit = false;
+    document.getElementById("btn-c").classList.add("active");
+    document.getElementById("btn-c").setAttribute("aria-checked", "true");
+    document.getElementById("btn-f").classList.remove("active");
+    document.getElementById("btn-f").setAttribute("aria-checked", "false");
+    render();
+  });
+  document.getElementById("btn-f").addEventListener("click", function () {
+    useFahrenheit = true;
+    document.getElementById("btn-f").classList.add("active");
+    document.getElementById("btn-f").setAttribute("aria-checked", "true");
+    document.getElementById("btn-c").classList.remove("active");
+    document.getElementById("btn-c").setAttribute("aria-checked", "false");
+    render();
+  });
+
+  // Modal
+  var modal = document.getElementById("modal-overlay");
+  function openModal() { modal.classList.add("visible"); document.getElementById("city-search-input").focus(); }
+  function closeModal() { modal.classList.remove("visible"); document.getElementById("city-search-input").value = ""; }
+
+  document.getElementById("add-city-trigger").addEventListener("click", openModal);
+  document.getElementById("empty-add-btn").addEventListener("click", openModal);
+  document.getElementById("modal-close").addEventListener("click", closeModal);
+  modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
+
+  var EXTRA_CITIES = {
+    berlin:   { id:"berlin",   name:"Berlin",       country:"Germany",   tempC:14, condition:"Overcast",     icon:"☁️", humidity:70, windKph:15, pressureHpa:1015, forecast:[{d:"Mon",hi:15,lo:9,ic:"☁️"},{d:"Tue",hi:17,lo:10,ic:"⛅"},{d:"Wed",hi:16,lo:8,ic:"🌧️"},{d:"Thu",hi:14,lo:7,ic:"☁️"},{d:"Fri",hi:16,lo:9,ic:"⛅"}] },
+    sydney:   { id:"sydney",   name:"Sydney",       country:"Australia", tempC:26, condition:"Clear Sky",    icon:"☀️", humidity:45, windKph:20, pressureHpa:1020, forecast:[{d:"Mon",hi:27,lo:20,ic:"☀️"},{d:"Tue",hi:28,lo:21,ic:"☀️"},{d:"Wed",hi:25,lo:19,ic:"⛅"},{d:"Thu",hi:24,lo:18,ic:"☁️"},{d:"Fri",hi:26,lo:19,ic:"☀️"}] },
+    mumbai:   { id:"mumbai",   name:"Mumbai",       country:"India",     tempC:33, condition:"Humid & Hazy", icon:"🌫️", humidity:88, windKph:8,  pressureHpa:1006, forecast:[{d:"Mon",hi:34,lo:27,ic:"⛅"},{d:"Tue",hi:33,lo:26,ic:"🌧️"},{d:"Wed",hi:32,lo:26,ic:"🌧️"},{d:"Thu",hi:33,lo:27,ic:"⛅"},{d:"Fri",hi:34,lo:27,ic:"☀️"}] },
+    cairo:    { id:"cairo",    name:"Cairo",        country:"Egypt",     tempC:35, condition:"Sunny",        icon:"☀️", humidity:25, windKph:14, pressureHpa:1014, forecast:[{d:"Mon",hi:36,lo:22,ic:"☀️"},{d:"Tue",hi:37,lo:23,ic:"☀️"},{d:"Wed",hi:35,lo:21,ic:"☀️"},{d:"Thu",hi:34,lo:20,ic:"⛅"},{d:"Fri",hi:36,lo:22,ic:"☀️"}] },
+    saopaulo: { id:"saopaulo", name:"São Paulo", country:"Brazil",  tempC:24, condition:"Thunderstorms",icon:"⛈️", humidity:75, windKph:16, pressureHpa:1010, forecast:[{d:"Mon",hi:25,lo:18,ic:"⛈️"},{d:"Tue",hi:23,lo:17,ic:"🌧️"},{d:"Wed",hi:26,lo:19,ic:"⛅"},{d:"Thu",hi:27,lo:20,ic:"☀️"},{d:"Fri",hi:25,lo:18,ic:"⛅"}] }
+  };
+
+  document.getElementById("modal-suggestions").addEventListener("click", function (e) {
+    var li = e.target.closest("li");
+    if (!li) return;
+    var key = li.getAttribute("data-city");
+    if (EXTRA_CITIES[key] && !CITIES.find(function (c) { return c.id === key; })) {
+      CITIES.push(EXTRA_CITIES[key]);
+      selectedId = key;
+    }
+    closeModal();
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

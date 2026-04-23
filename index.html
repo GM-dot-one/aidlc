@@ -66,6 +66,11 @@
     margin: 0 24px;
   }
 
+  .search-wrapper {
+    position: relative;
+    flex: 1;
+  }
+
   .search-box {
     display: flex;
     align-items: center;
@@ -74,7 +79,7 @@
     border-radius: 8px;
     padding: 7px 12px;
     gap: 8px;
-    flex: 1;
+    width: 100%;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
 
@@ -96,6 +101,54 @@
 
   .search-box input::placeholder { color: var(--text-secondary); }
 
+  /* ── City Dropdown ───────────────────────────────────────────── */
+  .city-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 200;
+    overflow: hidden;
+  }
+
+  .city-dropdown[hidden] { display: none; }
+
+  .city-dropdown-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.1s;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .city-dropdown-item:last-child { border-bottom: none; }
+
+  .city-dropdown-item:hover,
+  .city-dropdown-item.highlighted {
+    background: var(--accent-light);
+  }
+
+  .city-dropdown-item .city-name {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .city-dropdown-item .city-region {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Search Button ───────────────────────────────────────────── */
   .search-btn {
     margin-left: 8px;
     padding: 8px 16px;
@@ -464,6 +517,60 @@
     .extra-grid .detail-card:last-child { grid-column: span 2; }
     .forecast-row { grid-template-columns: 1fr; }
   }
+
+  /* ── Search loading indicator ────────────────────────────────── */
+  .search-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+    display: none;
+  }
+
+  .search-spinner.visible { display: block; }
+
+  /* ── Dropdown empty/error states ─────────────────────────────── */
+  .city-dropdown-empty {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* ── State fade-in transitions ───────────────────────────────── */
+  .state.active {
+    animation: stateFadeIn 0.18s ease-out;
+  }
+
+  @keyframes stateFadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Footer ──────────────────────────────────────────────────── */
+  footer {
+    text-align: center;
+    padding: 16px 24px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+    margin-top: auto;
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  footer a:hover { text-decoration: underline; }
+
+  /* ── Error type icon variants ────────────────────────────────── */
+  .error-icon { transition: none; }
 </style>
 </head>
 <body>
@@ -486,21 +593,28 @@
   </div>
 
   <form class="search-form" id="search-form" role="search" aria-label="Search for a city">
-    <div class="search-box">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input
-        type="search"
-        id="city-input"
-        placeholder="Search any city worldwide…"
-        aria-label="City name"
-        autocomplete="off"
-        autocorrect="off"
-        spellcheck="false"
-      >
+    <div class="search-wrapper">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <span class="search-spinner" id="search-spinner" aria-hidden="true"></span>
+        <input
+          type="search"
+          id="city-input"
+          placeholder="Search any city worldwide…"
+          aria-label="City name"
+          aria-autocomplete="list"
+          aria-controls="city-dropdown"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+        >
+      </div>
+      <div id="city-dropdown" class="city-dropdown" role="listbox"
+           aria-label="City suggestions" hidden></div>
     </div>
     <button type="submit" class="search-btn" id="search-btn">Search</button>
   </form>
@@ -545,38 +659,61 @@
   </div>
 </main>
 
+<footer>
+  Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+  &nbsp;&middot;&nbsp;
+  City search by <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noopener noreferrer">Open-Meteo Geocoding</a>
+</footer>
+
 <script>
 (function () {
   "use strict";
 
   /* ─── State ─────────────────────────────────────────────────── */
   var useFahrenheit = false;
-  var lastCity = "";
-  var lastData = null;
-  var HISTORY_KEY = "weather_search_history";
+  var lastCity = null;   // city info object: { name, displayName, lat, lon }
+  var lastData = null;   // Open-Meteo weather response
+  var HISTORY_KEY = "weather_v2_history";
   var MAX_HISTORY = 8;
 
-  /* ─── Weather code → emoji map ──────────────────────────────── */
-  var WEATHER_ICONS = {
-    113: "☀️", 116: "⛅", 119: "☁️", 122: "☁️",
-    143: "🌫️", 176: "🌦️", 179: "🌨️", 182: "🌧️", 185: "🌧️",
-    200: "⛈️", 227: "❄️", 230: "🌨️",
-    248: "🌫️", 260: "🌫️",
-    263: "🌦️", 266: "🌦️",
-    281: "🌧️", 284: "🌧️",
-    293: "🌦️", 296: "🌦️",
-    299: "🌧️", 302: "🌧️", 305: "🌧️", 308: "🌧️",
-    311: "🌧️", 314: "🌧️", 317: "🌧️", 320: "🌨️",
-    323: "🌨️", 326: "🌨️", 329: "❄️", 332: "❄️",
-    335: "❄️", 338: "❄️", 350: "🌧️",
-    353: "🌦️", 356: "🌧️", 359: "🌧️",
-    362: "🌨️", 365: "🌨️", 368: "🌨️", 371: "❄️",
-    374: "🌨️", 377: "🌨️",
-    386: "⛈️", 389: "⛈️", 392: "⛈️", 395: "⛈️"
+  /* ─── WMO weather code maps ─────────────────────────────────── */
+  var WMO_ICONS = {
+    0: "☀️",
+    1: "🌤️", 2: "⛅", 3: "☁️",
+    45: "🌫️", 48: "🌫️",
+    51: "🌦️", 53: "🌦️", 55: "🌧️",
+    56: "🌧️", 57: "🌧️",
+    61: "🌦️", 63: "🌧️", 65: "🌧️",
+    66: "🌧️", 67: "🌧️",
+    71: "🌨️", 73: "🌨️", 75: "❄️",
+    77: "❄️",
+    80: "🌦️", 81: "🌧️", 82: "🌧️",
+    85: "🌨️", 86: "❄️",
+    95: "⛈️", 96: "⛈️", 99: "⛈️"
+  };
+
+  var WMO_DESCRIPTIONS = {
+    0: "Clear sky",
+    1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Rime fog",
+    51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+    56: "Light freezing drizzle", 57: "Freezing drizzle",
+    61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+    66: "Slight freezing rain", 67: "Heavy freezing rain",
+    71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
+    77: "Snow grains",
+    80: "Slight showers", 81: "Moderate showers", 82: "Violent showers",
+    85: "Slight snow showers", 86: "Heavy snow showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm with hail", 99: "Thunderstorm with heavy hail"
   };
 
   function getWeatherIcon(code) {
-    return WEATHER_ICONS[parseInt(code, 10)] || "🌡️";
+    return WMO_ICONS[parseInt(code, 10)] || "🌡️";
+  }
+
+  function getWeatherDesc(code) {
+    return WMO_DESCRIPTIONS[parseInt(code, 10)] || "Unknown";
   }
 
   /* ─── Temperature helpers ───────────────────────────────────── */
@@ -599,6 +736,63 @@
     return useFahrenheit ? "°F" : "°C";
   }
 
+  /* ─── Wind helpers ──────────────────────────────────────────── */
+  function degreesToCompass(deg) {
+    var dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+    return dirs[Math.round(parseFloat(deg) / 22.5) % 16] || "";
+  }
+
+  /* ─── XSS protection ────────────────────────────────────────── */
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  /* ─── Debounce utility ──────────────────────────────────────── */
+  function debounce(fn, delay) {
+    var timer;
+    return function () {
+      var args = arguments;
+      var ctx = this;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, delay);
+    };
+  }
+
+  /* ─── Network helpers ───────────────────────────────────────── */
+  function isOnline() {
+    return typeof navigator.onLine === "undefined" || navigator.onLine;
+  }
+
+  function classifyFetchError(err, status) {
+    if (!isOnline()) {
+      return { type: "network", message: "No internet connection. Please check your network and try again." };
+    }
+    if (err && err.name === "AbortError") {
+      return { type: "timeout", message: "Request timed out. Please check your connection and try again." };
+    }
+    if (status === 429) {
+      return { type: "rate-limit", message: "Too many requests. Please wait a moment and try again." };
+    }
+    if (status >= 500) {
+      return { type: "server", message: "Weather service is temporarily unavailable. Please try again later." };
+    }
+    if (err && err.message) {
+      return { type: "unknown", message: err.message };
+    }
+    return { type: "unknown", message: "Unable to fetch weather data. Please try again." };
+  }
+
+  /* ─── Search spinner ─────────────────────────────────────────── */
+  function setSearchSpinner(visible) {
+    var el = document.getElementById("search-spinner");
+    if (el) el.classList.toggle("visible", !!visible);
+  }
+
   /* ─── localStorage history ──────────────────────────────────── */
   function loadHistory() {
     try {
@@ -609,12 +803,12 @@
     }
   }
 
-  function saveToHistory(cityName) {
+  function saveToHistory(cityInfo) {
     var history = loadHistory();
     history = history.filter(function (h) {
-      return h.toLowerCase() !== cityName.toLowerCase();
+      return h.displayName.toLowerCase() !== cityInfo.displayName.toLowerCase();
     });
-    history.unshift(cityName);
+    history.unshift(cityInfo);
     if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
@@ -634,114 +828,237 @@
 
     section.classList.add("visible");
     list.innerHTML = "";
-    history.forEach(function (city) {
+    history.forEach(function (cityInfo) {
       var chip = document.createElement("button");
       chip.type = "button";
       chip.className = "recent-chip";
-      chip.textContent = city;
-      chip.setAttribute("aria-label", "Search " + city);
+      chip.textContent = cityInfo.displayName || cityInfo.name;
+      chip.setAttribute("aria-label", "Search " + (cityInfo.displayName || cityInfo.name));
       chip.addEventListener("click", function () {
-        document.getElementById("city-input").value = city;
-        handleSearch(city);
+        document.getElementById("city-input").value = cityInfo.displayName || cityInfo.name;
+        hideDropdown();
+        handleSearchByCity(cityInfo);
       });
       list.appendChild(chip);
     });
   }
 
-  /* ─── API ────────────────────────────────────────────────────── */
-  async function getWeatherData(city) {
-    var url = "https://wttr.in/" + encodeURIComponent(city.trim()) + "?format=j1";
-    var controller = new AbortController();
-    var timeoutId = setTimeout(function () { controller.abort(); }, 10000);
-    var response;
-    try {
-      response = await fetch(url, { signal: controller.signal });
-    } catch (fetchErr) {
-      clearTimeout(timeoutId);
-      if (fetchErr.name === "AbortError") {
-        throw new Error("Request timed out. Please check your connection and try again.");
-      }
-      throw new Error("Network error. Please check your internet connection and try again.");
-    }
-    clearTimeout(timeoutId);
+  /* ─── Geocoding API ─────────────────────────────────────────── */
+  var geocodeAbort = null;
 
-    if (!response.ok) {
-      throw new Error("City not found or server error (HTTP " + response.status + ").");
-    }
-
-    var data;
-    try {
-      data = await response.json();
-    } catch (e) {
-      throw new Error("Unexpected response from the weather service. Please try again.");
-    }
-
-    // wttr.in returns data for (0,0) with empty areaName when city is unknown
-    var areaName = (
-      data.nearest_area &&
-      data.nearest_area[0] &&
-      data.nearest_area[0].areaName &&
-      data.nearest_area[0].areaName[0] &&
-      data.nearest_area[0].areaName[0].value
-    ) || "";
-
-    if (!areaName) {
-      throw new Error("City “" + city + "” not found. Please check the spelling and try again.");
-    }
-
-    return data;
+  async function fetchCitySuggestions(query, signal) {
+    var url = "https://geocoding-api.open-meteo.com/v1/search?name=" +
+      encodeURIComponent(query) + "&count=5&language=en&format=json";
+    var response = await fetch(url, signal ? { signal: signal } : {});
+    if (!response.ok) return [];
+    var data = await response.json();
+    return data.results || [];
   }
 
-  /* ─── Render ─────────────────────────────────────────────────── */
-  function renderWeatherData(data) {
-    var cc = data.current_condition[0];
-    var area = data.nearest_area[0];
-    var areaName = area.areaName[0].value;
-    var country = area.country[0].value;
-    var region = (area.region && area.region[0] && area.region[0].value) || "";
+  function buildCityInfo(geoResult) {
+    var parts = [geoResult.name];
+    if (geoResult.admin1 && geoResult.admin1 !== geoResult.name) {
+      parts.push(geoResult.admin1);
+    }
+    if (geoResult.country) parts.push(geoResult.country);
+    return {
+      name: geoResult.name,
+      displayName: parts.filter(Boolean).join(", "),
+      lat: geoResult.latitude,
+      lon: geoResult.longitude
+    };
+  }
 
-    var cityDisplay = areaName + (region && region !== areaName ? ", " + region : "") + ", " + country;
+  /* ─── Open-Meteo Weather API ────────────────────────────────── */
+  async function fetchWeatherByCoords(lat, lon) {
+    if (!isOnline()) {
+      var offlineErr = new Error("No internet connection. Please check your network and try again.");
+      offlineErr.errorType = "network";
+      throw offlineErr;
+    }
 
-    var code = cc.weatherCode;
+    var url = "https://api.open-meteo.com/v1/forecast" +
+      "?latitude=" + lat + "&longitude=" + lon +
+      "&current=temperature_2m,apparent_temperature,relative_humidity_2m," +
+      "wind_speed_10m,wind_direction_10m,weather_code,pressure_msl,visibility" +
+      "&daily=temperature_2m_max,temperature_2m_min,weather_code,uv_index_max" +
+      "&timezone=auto&forecast_days=3";
+
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function () { controller.abort(); }, 10000);
+
+    try {
+      var response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        var classified = classifyFetchError(null, response.status);
+        var httpErr = new Error(classified.message);
+        httpErr.errorType = classified.type;
+        throw httpErr;
+      }
+      return await response.json();
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.errorType) throw err;
+      var info = classifyFetchError(err, null);
+      var wrappedErr = new Error(info.message);
+      wrappedErr.errorType = info.type;
+      throw wrappedErr;
+    }
+  }
+
+  /* ─── Dropdown ──────────────────────────────────────────────── */
+  var currentSuggestions = [];
+  var highlightedIndex = -1;
+
+  function showDropdown(suggestions) {
+    var dropdown = document.getElementById("city-dropdown");
+    dropdown.innerHTML = "";
+    highlightedIndex = -1;
+
+    suggestions.forEach(function (city, idx) {
+      var item = document.createElement("div");
+      item.className = "city-dropdown-item";
+      item.setAttribute("role", "option");
+      item.setAttribute("data-index", String(idx));
+
+      var regionParts = [];
+      if (city.admin1 && city.admin1 !== city.name) regionParts.push(city.admin1);
+      if (city.country) regionParts.push(city.country);
+
+      item.innerHTML =
+        '<span class="city-name">' + escapeHtml(city.name) + '</span>' +
+        (regionParts.length
+          ? '<span class="city-region">' + escapeHtml(regionParts.join(", ")) + '</span>'
+          : "");
+
+      item.addEventListener("mouseenter", function () { setHighlight(idx); });
+      item.addEventListener("mouseleave", function () { setHighlight(-1); });
+      item.addEventListener("mousedown", function (e) {
+        // prevent blur on input before click fires
+        e.preventDefault();
+      });
+      item.addEventListener("click", function () {
+        var cityInfo = buildCityInfo(city);
+        document.getElementById("city-input").value = cityInfo.displayName;
+        hideDropdown();
+        handleSearchByCity(cityInfo);
+      });
+
+      dropdown.appendChild(item);
+    });
+
+    dropdown.hidden = false;
+  }
+
+  function hideDropdown() {
+    var dropdown = document.getElementById("city-dropdown");
+    dropdown.hidden = true;
+    dropdown.innerHTML = "";
+    currentSuggestions = [];
+    highlightedIndex = -1;
+  }
+
+  function showEmptyDropdown(query) {
+    var dropdown = document.getElementById("city-dropdown");
+    dropdown.innerHTML = '<div class="city-dropdown-empty">No cities found for "' +
+      escapeHtml(query) + '"</div>';
+    dropdown.hidden = false;
+  }
+
+  function setHighlight(idx) {
+    highlightedIndex = idx;
+    var items = document.querySelectorAll(".city-dropdown-item");
+    items.forEach(function (item, i) {
+      item.classList.toggle("highlighted", i === idx);
+    });
+  }
+
+  /* ─── Debounced input handler ───────────────────────────────── */
+  var debouncedFetch = debounce(async function (query) {
+    query = query.trim();
+    if (query.length < 2) {
+      hideDropdown();
+      setSearchSpinner(false);
+      return;
+    }
+
+    if (geocodeAbort) {
+      geocodeAbort.abort();
+    }
+    geocodeAbort = new AbortController();
+    var signal = geocodeAbort.signal;
+
+    setSearchSpinner(true);
+
+    try {
+      var suggestions = await fetchCitySuggestions(query, signal);
+      if (signal.aborted) return;
+      geocodeAbort = null;
+      currentSuggestions = suggestions;
+      if (suggestions.length) {
+        showDropdown(suggestions);
+      } else {
+        showEmptyDropdown(query);
+      }
+    } catch (e) {
+      if (e.name !== "AbortError") hideDropdown();
+    } finally {
+      if (!signal.aborted) setSearchSpinner(false);
+    }
+  }, 300);
+
+  /* ─── Render weather (Open-Meteo format) ────────────────────── */
+  function renderWeatherData(data, cityInfo) {
+    var cur = data.current;
+    var daily = data.daily;
+
+    var code = cur.weather_code;
     var icon = getWeatherIcon(code);
-    var desc = (cc.weatherDesc && cc.weatherDesc[0] && cc.weatherDesc[0].value) || "N/A";
-    var uvIndex = cc.uvIndex || "N/A";
-    var visKm = cc.visibility;
-    var visMi = cc.visibilitymiles;
-    var visDisplay = useFahrenheit
-      ? (visMi ? escapeHtml(String(visMi)) + " mi" : "N/A")
-      : (visKm ? escapeHtml(String(visKm)) + " km" : "N/A");
-    var windDir = cc.winddir16Point || "";
-    var windKph = cc.windspeedKmph || "0";
-    var windMph = cc.windspeedMiles || "0";
+    var desc = getWeatherDesc(code);
+
+    var tempC = cur.temperature_2m;
+    var feelsLikeC = cur.apparent_temperature;
+    var humidity = cur.relative_humidity_2m;
+    var windSpeedKmh = cur.wind_speed_10m;
+    var windDir = degreesToCompass(cur.wind_direction_10m);
+    var pressure = cur.pressure_msl != null ? Math.round(cur.pressure_msl) : "N/A";
+    var visibilityM = cur.visibility;
+
     var windDisplay = useFahrenheit
-      ? windMph + " mph " + windDir
-      : windKph + " km/h " + windDir;
+      ? Math.round(windSpeedKmh * 0.621371) + " mph " + windDir
+      : Math.round(windSpeedKmh) + " km/h " + windDir;
+
+    var visDisplay;
+    if (visibilityM == null) {
+      visDisplay = "N/A";
+    } else if (useFahrenheit) {
+      visDisplay = Math.round(visibilityM / 1609) + " mi";
+    } else {
+      visDisplay = visibilityM >= 1000
+        ? Math.round(visibilityM / 1000) + " km"
+        : visibilityM + " m";
+    }
+
+    var uvIndex = (daily.uv_index_max && daily.uv_index_max[0] != null)
+      ? Math.round(daily.uv_index_max[0])
+      : "N/A";
 
     var now = new Date();
     var updated = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    // Build 3-day forecast from data.weather[]
     var forecastHtml = "";
-    if (data.weather && data.weather.length) {
-      forecastHtml = data.weather.map(function (day, idx) {
-        var dayDate = new Date(day.date + "T12:00:00");
+    if (daily.time && daily.time.length) {
+      forecastHtml = daily.time.map(function (date, idx) {
+        var dayDate = new Date(date + "T12:00:00");
         var dayLabel = idx === 0 ? "Today"
           : dayDate.toLocaleDateString([], { weekday: "short" });
-
-        // Use midday hourly condition for icon if available
-        var dayCode = day.hourly && day.hourly[4]
-          ? day.hourly[4].weatherCode
-          : (day.hourly && day.hourly[0] ? day.hourly[0].weatherCode : code);
+        var dayCode = daily.weather_code[idx];
         var dayIcon = getWeatherIcon(dayCode);
-
-        var hiC = day.maxtempC;
-        var loC = day.mintempC;
-        var hiF = day.maxtempF;
-        var loF = day.mintempF;
-        var hiDisplay = useFahrenheit ? Math.round(hiF) + "°F" : Math.round(hiC) + "°C";
-        var loDisplay = useFahrenheit ? Math.round(loF) + "°F" : Math.round(loC) + "°C";
-
+        var hiC = daily.temperature_2m_max[idx];
+        var loC = daily.temperature_2m_min[idx];
+        var hiDisplay = useFahrenheit ? toF(hiC) + "°F" : Math.round(hiC) + "°C";
+        var loDisplay = useFahrenheit ? toF(loC) + "°F" : Math.round(loC) + "°C";
         return '<div class="forecast-day">' +
           '<div class="day-label">' + dayLabel + '</div>' +
           '<div class="day-icon" aria-hidden="true">' + dayIcon + '</div>' +
@@ -754,7 +1071,7 @@
     var panel = document.getElementById("weather-state");
     panel.innerHTML =
       '<div class="weather-header">' +
-        '<h1 id="weather-city-name">' + escapeHtml(cityDisplay) + '</h1>' +
+        '<h1 id="weather-city-name">' + escapeHtml(cityInfo.displayName) + '</h1>' +
         '<div class="updated">Updated at ' + updated + '</div>' +
       '</div>' +
 
@@ -762,10 +1079,10 @@
         '<div class="current-left">' +
           '<div class="weather-icon-large" aria-label="' + escapeHtml(desc) + '">' + icon + '</div>' +
           '<div class="condition-label">' + escapeHtml(desc) + '</div>' +
-          '<div class="feels-like">Feels like ' + displayTemp(cc.FeelsLikeC) + '</div>' +
+          '<div class="feels-like">Feels like ' + displayTemp(feelsLikeC) + '</div>' +
         '</div>' +
         '<div class="current-right">' +
-          '<div class="temp-value" id="hero-temp">' + tempNumeric(cc.temp_C) + '</div>' +
+          '<div class="temp-value" id="hero-temp">' + tempNumeric(tempC) + '</div>' +
           '<div class="temp-unit-label">' + tempUnitLabel() + '</div>' +
         '</div>' +
       '</div>' +
@@ -773,7 +1090,7 @@
       '<div class="detail-grid" role="region" aria-label="Weather details">' +
         '<div class="detail-card">' +
           '<div class="detail-icon" aria-hidden="true">💧</div>' +
-          '<div class="detail-value">' + escapeHtml(String(cc.humidity || "N/A")) + '%</div>' +
+          '<div class="detail-value">' + escapeHtml(String(humidity)) + '%</div>' +
           '<div class="detail-label">Humidity</div>' +
         '</div>' +
         '<div class="detail-card">' +
@@ -783,7 +1100,7 @@
         '</div>' +
         '<div class="detail-card">' +
           '<div class="detail-icon" aria-hidden="true">📊</div>' +
-          '<div class="detail-value">' + escapeHtml(String(cc.pressure || "N/A")) + ' hPa</div>' +
+          '<div class="detail-value">' + escapeHtml(String(pressure)) + ' hPa</div>' +
           '<div class="detail-label">Pressure</div>' +
         '</div>' +
       '</div>' +
@@ -796,12 +1113,12 @@
         '</div>' +
         '<div class="detail-card">' +
           '<div class="detail-icon" aria-hidden="true">👁️</div>' +
-          '<div class="detail-value">' + visDisplay + '</div>' +
+          '<div class="detail-value">' + escapeHtml(visDisplay) + '</div>' +
           '<div class="detail-label">Visibility</div>' +
         '</div>' +
         '<div class="detail-card">' +
           '<div class="detail-icon" aria-hidden="true">🌡️</div>' +
-          '<div class="detail-value">' + displayTemp(cc.temp_C) + '</div>' +
+          '<div class="detail-value">' + displayTemp(tempC) + '</div>' +
           '<div class="detail-label">Temperature</div>' +
         '</div>' +
       '</div>' +
@@ -814,59 +1131,104 @@
         : "");
   }
 
-  /* ─── XSS protection ────────────────────────────────────────── */
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
   /* ─── State management ──────────────────────────────────────── */
   function showState(name) {
     ["welcome-state", "loading-state", "error-state", "weather-state"].forEach(function (id) {
       var el = document.getElementById(id);
-      if (el) {
-        el.classList.toggle("active", id === name);
-      }
+      if (el) el.classList.toggle("active", id === name);
     });
   }
 
-  function showError(msg) {
-    document.getElementById("error-message").textContent = msg;
+  var ERROR_ICONS = {
+    "network":    "📡",
+    "timeout":    "⏱️",
+    "rate-limit": "🚦",
+    "server":     "🔧",
+    "notfound":   "🔍",
+    "unknown":    "⚠️"
+  };
+
+  function showError(msg, type) {
+    document.getElementById("error-message").textContent = msg ||
+      "Unable to fetch weather data. Please try again.";
+    document.querySelector(".error-icon").textContent =
+      ERROR_ICONS[type] || "⚠️";
     showState("error-state");
   }
 
-  /* ─── Handle search ─────────────────────────────────────────── */
-  async function handleSearch(city) {
-    city = (city || "").trim();
-    if (!city) return;
-
-    lastCity = city;
+  /* ─── Fetch and display weather for a resolved city ────────── */
+  async function handleSearchByCity(cityInfo) {
+    lastCity = cityInfo;
     showState("loading-state");
-    document.getElementById("loading-text").textContent = 'Fetching weather for "' + city + '"…';
+    document.getElementById("loading-text").textContent =
+      'Fetching weather for "' + cityInfo.displayName + '"…';
     document.getElementById("search-btn").disabled = true;
 
     try {
-      var data = await getWeatherData(city);
+      var data = await fetchWeatherByCoords(cityInfo.lat, cityInfo.lon);
       lastData = data;
-      saveToHistory(city);
-      renderWeatherData(data);
+      saveToHistory(cityInfo);
+      renderWeatherData(data, cityInfo);
       showState("weather-state");
     } catch (err) {
       var msg = (err && err.message) || "Unable to fetch weather data. Please try again.";
-      showError(msg);
+      var type = (err && err.errorType) || "unknown";
+      showError(msg, type);
     } finally {
+      document.getElementById("search-btn").disabled = false;
+    }
+  }
+
+  /* ─── Handle form submit: geocode if needed ─────────────────── */
+  async function handleFormSubmit(query) {
+    query = query.trim();
+    if (!query) return;
+
+    // Use highlighted or first suggestion if available
+    var targetSuggestion = null;
+    if (highlightedIndex >= 0 && currentSuggestions[highlightedIndex]) {
+      targetSuggestion = currentSuggestions[highlightedIndex];
+    } else if (currentSuggestions.length > 0) {
+      targetSuggestion = currentSuggestions[0];
+    }
+
+    if (targetSuggestion) {
+      var cityInfo = buildCityInfo(targetSuggestion);
+      document.getElementById("city-input").value = cityInfo.displayName;
+      hideDropdown();
+      handleSearchByCity(cityInfo);
+      return;
+    }
+
+    // No suggestions cached — geocode first
+    showState("loading-state");
+    document.getElementById("loading-text").textContent = 'Looking up "' + query + '"…';
+    document.getElementById("search-btn").disabled = true;
+
+    try {
+      var suggestions = await fetchCitySuggestions(query, null);
+      if (!suggestions.length) {
+        var nfErr = new Error('No city found for "' + query + '". Check the spelling and try again.');
+        nfErr.errorType = "notfound";
+        throw nfErr;
+      }
+      var cityInfo = buildCityInfo(suggestions[0]);
+      document.getElementById("city-input").value = cityInfo.displayName;
+      hideDropdown();
+      document.getElementById("search-btn").disabled = false;
+      handleSearchByCity(cityInfo);
+    } catch (err) {
+      var msg = (err && err.message) || "City not found. Please try again.";
+      var type = (err && err.errorType) || "unknown";
+      showError(msg, type);
       document.getElementById("search-btn").disabled = false;
     }
   }
 
   /* ─── Re-render on unit toggle (no new fetch) ───────────────── */
   function rerenderIfLoaded() {
-    if (lastData) {
-      renderWeatherData(lastData);
+    if (lastData && lastCity) {
+      renderWeatherData(lastData, lastCity);
       showState("weather-state");
     }
   }
@@ -874,7 +1236,43 @@
   /* ─── Event listeners ───────────────────────────────────────── */
   document.getElementById("search-form").addEventListener("submit", function (e) {
     e.preventDefault();
-    handleSearch(document.getElementById("city-input").value);
+    handleFormSubmit(document.getElementById("city-input").value);
+  });
+
+  document.getElementById("city-input").addEventListener("input", function (e) {
+    if (e.target.value.trim().length < 2) {
+      setSearchSpinner(false);
+      hideDropdown();
+    }
+    debouncedFetch(e.target.value);
+  });
+
+  document.getElementById("city-input").addEventListener("keydown", function (e) {
+    var dropdown = document.getElementById("city-dropdown");
+    if (dropdown.hidden) return;
+    var count = currentSuggestions.length;
+    if (!count) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((highlightedIndex + 1) % count);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((highlightedIndex - 1 + count) % count);
+    } else if (e.key === "Escape") {
+      hideDropdown();
+    }
+  });
+
+  document.getElementById("city-input").addEventListener("blur", function () {
+    // Small delay so click on dropdown item fires first
+    setTimeout(hideDropdown, 150);
+  });
+
+  // Close dropdown when clicking outside the search area
+  document.addEventListener("click", function (e) {
+    var wrapper = document.querySelector(".search-wrapper");
+    if (wrapper && !wrapper.contains(e.target)) hideDropdown();
   });
 
   document.getElementById("btn-c").addEventListener("click", function () {
@@ -902,14 +1300,27 @@
   });
 
   document.getElementById("retry-btn").addEventListener("click", function () {
-    if (lastCity) handleSearch(lastCity);
+    if (lastCity) handleSearchByCity(lastCity);
     else showState("welcome-state");
+  });
+
+  /* ─── Offline / online events ───────────────────────────────── */
+  window.addEventListener("offline", function () {
+    var loadingEl = document.getElementById("loading-state");
+    if (loadingEl && loadingEl.classList.contains("active")) {
+      showError(
+        "No internet connection. Please check your network and try again.",
+        "network"
+      );
+      document.getElementById("search-btn").disabled = false;
+    }
+    setSearchSpinner(false);
+    hideDropdown();
   });
 
   /* ─── Init ──────────────────────────────────────────────────── */
   renderHistory();
 
-  // Restore last unit preference
   try {
     if (localStorage.getItem("weather_unit") === "F") {
       useFahrenheit = true;

@@ -27,7 +27,10 @@ $spec_json
 - Each task must have a concrete "definition of done" — a demonstrable
   artifact (endpoint returns X, page renders Y, CLI prints Z).
 - Include a QA / polish task only if the spec has measurable acceptance
-  criteria not already covered by the build tasks.
+  criteria not already covered by the build tasks. QA tasks for frontend
+  or HTML deliverables MUST include runtime verification: start a local
+  server, fetch the page with curl, confirm it returns 200 and contains
+  the expected content. "Review the code" is not QA — actually run it.
 
 # Required output
 

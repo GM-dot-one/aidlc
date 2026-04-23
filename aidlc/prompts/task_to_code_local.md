@@ -52,10 +52,20 @@ $prior_work_summary
 2. Implement the task, building on top of what already exists.
 3. If the repo has a test suite, add or update tests covering what you
    changed. Run them and iterate until they pass.
-4. If something blocks you (missing dependency, ambiguous requirement),
+4. **Verify frontend code actually works at runtime.** If you created or
+   modified HTML, CSS, or JavaScript files:
+   - Start a local HTTP server (e.g. `python3 -m http.server 9111`)
+   - Use `curl` to fetch the page and confirm a 200 status
+   - Check that the response body contains expected elements (title,
+     key divs, script tags, no error messages)
+   - If the page fetches external APIs, verify those URLs are reachable
+     with `curl` too
+   - Kill the server when done (`kill %1` or by PID)
+   - If anything fails, fix the code and re-test before finishing
+5. If something blocks you (missing dependency, ambiguous requirement),
    leave a clear TODO comment in the code with `# TODO(ai-dlc):` and move
    on. Do not block waiting for human input.
-5. Keep the surface area small — if the task description implies scope
+6. Keep the surface area small — if the task description implies scope
    creep, stick to what was asked and note follow-ups in a comment.
 
 ## What NOT to do

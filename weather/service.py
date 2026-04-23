@@ -13,34 +13,28 @@ from weather.cities import find_city
 from weather.errors import CityNotFoundError, WeatherDataUnavailableError
 from weather.models import WeatherCondition, WeatherData
 
-# TODO(ai-dlc): Replace with real data source from task #4 (weather data retrieval).
 _SAMPLE_DATA: dict[str, dict[str, Any]] = {
     "london": {
         "temperature_celsius": 14.0,
         "humidity_percent": 72.0,
         "condition": WeatherCondition.CLOUDY,
+        "wind_speed_kmh": 15.0,
     },
     "paris": {
         "temperature_celsius": 18.5,
         "humidity_percent": 60.0,
         "condition": WeatherCondition.PARTLY_CLOUDY,
+        "wind_speed_kmh": 10.0,
     },
     "tokyo": {
         "temperature_celsius": 22.0,
         "humidity_percent": 55.0,
         "condition": WeatherCondition.SUNNY,
+        "wind_speed_kmh": 8.0,
     },
 }
 
 KNOWN_CITIES: set[str] = {"london", "paris", "tokyo", "new york", "sydney", "berlin"}
-
-
-def _fetch_weather_data(city: str) -> dict[str, Any] | None:
-    """Fetch raw weather data for a city.
-
-    TODO(ai-dlc): Replace stub with actual API call from task #4.
-    """
-    return _SAMPLE_DATA.get(city.lower())
 
 
 def get_weather(city: str) -> WeatherData:
@@ -58,20 +52,21 @@ def get_weather(city: str) -> WeatherData:
     if normalised not in KNOWN_CITIES:
         raise CityNotFoundError(city)
 
-    raw = _fetch_weather_data(normalised)
+    raw = _SAMPLE_DATA.get(normalised)
     if raw is None:
         raise WeatherDataUnavailableError(
             city, reason="weather service returned no data for this city"
         )
 
-    city_obj = find_city(normalised)
+    city_obj = find_city(city)
     if city_obj is None:
-        raise WeatherDataUnavailableError(city, reason="city metadata not found in registry")
+        raise WeatherDataUnavailableError(city, reason="city coordinates unavailable")
 
     return WeatherData(
         city=city_obj,
         temperature_celsius=raw["temperature_celsius"],
         humidity_percent=raw["humidity_percent"],
         condition=raw["condition"],
+        wind_speed_kmh=raw.get("wind_speed_kmh", 0.0),
         timestamp=datetime.now(tz=UTC),
     )

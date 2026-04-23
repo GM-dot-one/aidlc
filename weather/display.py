@@ -180,3 +180,22 @@ class WeatherDisplay:
             justify="center",
         )
         self.show_multiple(weather_list)
+
+
+def handle_weather_request(city_name: str) -> str:
+    """Handle a weather request for a city, returning a formatted display string.
+
+    Returns a user-facing string with weather data on success, or an error
+    message starting with "Error:" on failure.
+    """
+    try:
+        w = get_weather(city_name)
+        return (
+            f"Weather for {w.city.name}\n"
+            f"  Temperature: {w.temperature_celsius:.1f}°C / {w.temperature_fahrenheit:.1f}°F\n"
+            f"  Humidity: {w.humidity_percent:.1f}%\n"
+            f"  Condition: {w.condition.value}\n"
+            f"  Wind: {w.wind_speed_kmh:.1f} km/h"
+        )
+    except WeatherError as exc:
+        return format_weather_error(exc)

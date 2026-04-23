@@ -3,55 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>City List</title>
+  <title>Weather App</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Weather App</h1>
-    <p class="subtitle">Select a city to view weather information.</p>
 
-    <div class="controls">
-      <label for="city-select" class="sr-only">Select a city</label>
-      <select id="city-select" class="city-select" aria-label="Select a city">
-        <option value="">-- Select a city --</option>
-      </select>
-    </div>
-
-    <div id="selected-city-display" class="selected-city-display" hidden>
-      <article class="city-card selected">
-        <div class="city-info">
-          <span class="city-name" id="selected-city-name"></span>
-          <span class="city-country" id="selected-city-country"></span>
-        </div>
-        <div class="city-meta">
-          <span class="city-population" id="selected-city-population"></span>
-          <span class="city-coords" id="selected-city-coords"></span>
-        </div>
-      </article>
-    </div>
-
-    <div class="controls controls-secondary">
-      <input
-        type="search"
-        id="search"
-        class="search-input"
-        placeholder="Search by city or country…"
-        aria-label="Search cities"
-      >
-      <select id="sort" class="sort-select" aria-label="Sort cities">
-        <option value="name">Sort by name</option>
-        <option value="country">Sort by country</option>
-        <option value="population">Sort by population</option>
-      </select>
-    </div>
-
-    <div id="weather-panel" class="weather-panel" hidden></div>
-
-    <p id="city-count" class="city-count"></p>
-    <div id="city-list" class="city-list"></div>
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    Weather App
   </div>
+  <div class="header-actions">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search" placeholder="Search cities..." aria-label="Search cities">
+    </div>
+    <div class="unit-toggle" role="radiogroup" aria-label="Temperature unit">
+      <button class="active" role="radio" aria-checked="true" id="btn-c">°C</button>
+      <button role="radio" aria-checked="false" id="btn-f">°F</button>
+    </div>
+  </div>
+</header>
 
-  <script src="app.js"></script>
+<div class="app">
+  <aside class="city-panel">
+    <div class="city-panel-header">
+      <h2>Cities</h2>
+      <p id="city-count" class="city-count"></p>
+    </div>
+    <ul class="city-list" role="listbox" aria-label="Cities" id="city-list"></ul>
+  </aside>
+
+  <main class="weather-panel" id="weather-panel">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon" aria-hidden="true">&#127326;</div>
+      <h2>Select a city</h2>
+      <p>Choose a city from the list to see its current weather and forecast.</p>
+    </div>
+  </main>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>

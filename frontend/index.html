@@ -4,59 +4,402 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Weather App</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      max-width: 720px;
+      padding: 2.5rem 1rem 1rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    header p {
+      color: #94a3b8;
+      margin-top: 0.25rem;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 1rem;
+      width: 100%;
+      max-width: 720px;
+      margin: 1.5rem 1rem;
+      padding: 2rem;
+    }
+
+    .select-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto 2rem;
+    }
+
+    .select-wrapper select {
+      width: 100%;
+      padding: 0.75rem 2.5rem 0.75rem 1rem;
+      font-size: 1rem;
+      font-family: inherit;
+      color: #e2e8f0;
+      background: #0f172a;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 0.5rem;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .select-wrapper select:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+    }
+
+    .select-wrapper::after {
+      content: "";
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid #94a3b8;
+      pointer-events: none;
+    }
+
+    .placeholder {
+      text-align: center;
+      color: #64748b;
+      padding: 3rem 1rem;
+      font-size: 1.1rem;
+    }
+
+    .placeholder .icon { font-size: 3rem; margin-bottom: 0.75rem; }
+
+    .loading {
+      text-align: center;
+      padding: 3rem 1rem;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(148, 163, 184, 0.15);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading p { color: #94a3b8; }
+
+    .error {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #fca5a5;
+    }
+
+    .error .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .error p { margin-top: 0.5rem; color: #94a3b8; font-size: 0.9rem; }
+
+    .error button {
+      margin-top: 1rem;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 0.5rem;
+      background: transparent;
+      color: #e2e8f0;
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .error button:hover { background: rgba(148, 163, 184, 0.1); }
+
+    .weather-display { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .weather-header {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    .weather-emoji { font-size: 4rem; line-height: 1.2; }
+
+    .weather-header h2 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    .weather-desc {
+      color: #94a3b8;
+      font-size: 1rem;
+      margin-top: 0.25rem;
+      text-transform: capitalize;
+    }
+
+    .temp-primary {
+      font-size: 3.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-top: 0.5rem;
+    }
+
+    .temp-secondary {
+      color: #64748b;
+      font-size: 1.1rem;
+      margin-top: 0.15rem;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+    }
+
+    .detail-item {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .detail-item .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 0.35rem;
+    }
+
+    .detail-item .value {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .detail-item .sub {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 0.15rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem 1rem 2rem;
+      color: #475569;
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 480px) {
+      header { padding: 1.5rem 1rem 0.75rem; }
+      header h1 { font-size: 1.35rem; }
+      .card { padding: 1.25rem; margin: 1rem 0.75rem; }
+      .temp-primary { font-size: 2.75rem; }
+      .details-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <h1>&#9728;&#65039; Weather App</h1>
+    <p>Select a city to see the current weather</p>
+  </header>
 
-<header>
-  <div class="logo">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
-      <circle cx="12" cy="12" r="5"/>
-      <line x1="12" y1="1" x2="12" y2="3"/>
-      <line x1="12" y1="21" x2="12" y2="23"/>
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-      <line x1="1" y1="12" x2="3" y2="12"/>
-      <line x1="21" y1="12" x2="23" y2="12"/>
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-    </svg>
-    Weather App
+  <div class="card">
+    <div class="select-wrapper">
+      <select id="city-select" aria-label="Select a city">
+        <option value="">Choose a city&hellip;</option>
+        <option value="London">London</option>
+        <option value="New York">New York</option>
+        <option value="Tokyo">Tokyo</option>
+        <option value="Paris">Paris</option>
+        <option value="Sydney">Sydney</option>
+        <option value="Dubai">Dubai</option>
+        <option value="Singapore">Singapore</option>
+        <option value="Mumbai">Mumbai</option>
+        <option value="São Paulo">S&atilde;o Paulo</option>
+        <option value="Toronto">Toronto</option>
+        <option value="Berlin">Berlin</option>
+        <option value="Cairo">Cairo</option>
+      </select>
+    </div>
+
+    <div id="content">
+      <div class="placeholder">
+        <div class="icon">&#127758;</div>
+        <div>Pick a city from the dropdown above</div>
+      </div>
+    </div>
   </div>
-  <div class="header-actions">
-    <div class="search-box">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input type="text" id="search" placeholder="Search cities..." aria-label="Search cities">
-    </div>
-    <div class="unit-toggle" role="radiogroup" aria-label="Temperature unit">
-      <button class="active" role="radio" aria-checked="true" id="btn-c">°C</button>
-      <button role="radio" aria-checked="false" id="btn-f">°F</button>
-    </div>
-  </div>
-</header>
 
-<div class="app">
-  <aside class="city-panel">
-    <div class="city-panel-header">
-      <h2>Cities</h2>
-      <p id="city-count" class="city-count"></p>
-    </div>
-    <ul class="city-list" role="listbox" aria-label="Cities" id="city-list"></ul>
-  </aside>
+  <footer>Powered by wttr.in</footer>
 
-  <main class="weather-panel" id="weather-panel">
-    <div class="empty-state" id="empty-state">
-      <div class="empty-icon" aria-hidden="true">&#127326;</div>
-      <h2>Select a city</h2>
-      <p>Choose a city from the list to see its current weather and forecast.</p>
-    </div>
-  </main>
-</div>
+  <script>
+    const select = document.getElementById("city-select");
+    const content = document.getElementById("content");
 
-<script src="app.js"></script>
+    const weatherEmoji = {
+      "Sunny": "☀️",
+      "Clear": "🌑",
+      "Partly cloudy": "⛅",
+      "Cloudy": "☁️",
+      "Overcast": "🌥️",
+      "Mist": "🌫️",
+      "Fog": "🌫️",
+      "Patchy rain possible": "🌦️",
+      "Light rain": "🌧️",
+      "Moderate rain": "🌧️",
+      "Heavy rain": "🌧️",
+      "Light drizzle": "🌦️",
+      "Patchy light drizzle": "🌦️",
+      "Patchy light rain": "🌦️",
+      "Moderate or heavy rain shower": "🌧️",
+      "Light rain shower": "🌦️",
+      "Thundery outbreaks possible": "⛈️",
+      "Patchy snow possible": "🌨️",
+      "Light snow": "🌨️",
+      "Moderate snow": "❄️",
+      "Heavy snow": "❄️",
+      "Blizzard": "🌨️",
+      "Blowing snow": "🌨️",
+      "Freezing fog": "🧊",
+      "Freezing drizzle": "🧊",
+      "Light freezing rain": "🧊",
+      "Ice pellets": "🧊"
+    };
+
+    function getEmoji(description) {
+      if (weatherEmoji[description]) return weatherEmoji[description];
+      const d = description.toLowerCase();
+      if (d.includes("thunder")) return "⛈️";
+      if (d.includes("snow") || d.includes("blizzard") || d.includes("sleet")) return "🌨️";
+      if (d.includes("rain") || d.includes("drizzle") || d.includes("shower")) return "🌧️";
+      if (d.includes("fog") || d.includes("mist") || d.includes("haze")) return "🌫️";
+      if (d.includes("cloud") || d.includes("overcast")) return "☁️";
+      if (d.includes("sun") || d.includes("clear")) return "☀️";
+      return "🌤️";
+    }
+
+    function showLoading(city) {
+      content.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Fetching weather for ${city}&hellip;</p>
+        </div>`;
+    }
+
+    function showError(city, message) {
+      content.innerHTML = `
+        <div class="error">
+          <div class="icon">&#9888;&#65039;</div>
+          <strong>Could not load weather</strong>
+          <p>${message}</p>
+          <button onclick="fetchWeather('${city.replace(/'/g, "\\'")}')">Try again</button>
+        </div>`;
+    }
+
+    function cToF(c) {
+      return Math.round(c * 9 / 5 + 32);
+    }
+
+    function renderWeather(city, data) {
+      const current = data.current_condition[0];
+      const tempC = parseInt(current.temp_C, 10);
+      const tempF = parseInt(current.temp_F, 10);
+      const humidity = current.humidity;
+      const desc = current.weatherDesc[0].value;
+      const windKmph = current.windspeedKmph;
+      const windMph = current.windspeedMiles;
+      const windDir = current.winddir16Point;
+      const feelsLikeC = current.FeelsLikeC;
+      const feelsLikeF = current.FeelsLikeF;
+      const uvIndex = current.uvIndex;
+      const visibility = current.visibility;
+      const pressure = current.pressure;
+      const emoji = getEmoji(desc);
+
+      content.innerHTML = `
+        <div class="weather-display">
+          <div class="weather-header">
+            <div class="weather-emoji">${emoji}</div>
+            <h2>${city}</h2>
+            <div class="weather-desc">${desc}</div>
+            <div class="temp-primary">${tempC}&deg;C</div>
+            <div class="temp-secondary">${tempF}&deg;F &middot; Feels like ${feelsLikeC}&deg;C / ${feelsLikeF}&deg;F</div>
+          </div>
+          <div class="details-grid">
+            <div class="detail-item">
+              <div class="label">Humidity</div>
+              <div class="value">${humidity}%</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">Wind</div>
+              <div class="value">${windKmph} km/h</div>
+              <div class="sub">${windMph} mph ${windDir}</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">UV Index</div>
+              <div class="value">${uvIndex}</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">Visibility</div>
+              <div class="value">${visibility} km</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">Pressure</div>
+              <div class="value">${pressure} mb</div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function fetchWeather(city) {
+      showLoading(city);
+      try {
+        const url = "https://wttr.in/" + encodeURIComponent(city) + "?format=j1";
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Server returned " + response.status);
+        const data = await response.json();
+        if (!data.current_condition || !data.current_condition.length) {
+          throw new Error("Unexpected response format");
+        }
+        renderWeather(city, data);
+      } catch (err) {
+        showError(city, err.message || "Network error. Please check your connection.");
+      }
+    }
+
+    select.addEventListener("change", function () {
+      const city = this.value;
+      if (city) fetchWeather(city);
+    });
+  </script>
 </body>
 </html>

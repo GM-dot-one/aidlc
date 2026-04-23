@@ -3,87 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weather App</title>
+  <title>City List</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
+  <div class="container">
     <h1>Weather App</h1>
-  </header>
+    <p class="subtitle">Select a city to view weather information.</p>
 
-  <main>
-    <section id="city-selection">
-      <label for="city-select">Select a city:</label>
-      <select id="city-select">
-        <option value="">-- Choose a city --</option>
-        <option value="Tokyo">Tokyo, Japan</option>
-        <option value="Delhi">Delhi, India</option>
-        <option value="Shanghai">Shanghai, China</option>
-        <option value="Sao Paulo">Sao Paulo, Brazil</option>
-        <option value="Mexico City">Mexico City, Mexico</option>
-        <option value="Cairo">Cairo, Egypt</option>
-        <option value="Mumbai">Mumbai, India</option>
-        <option value="Beijing">Beijing, China</option>
-        <option value="Dhaka">Dhaka, Bangladesh</option>
-        <option value="Osaka">Osaka, Japan</option>
-        <option value="New York">New York, United States</option>
-        <option value="Karachi">Karachi, Pakistan</option>
-        <option value="Buenos Aires">Buenos Aires, Argentina</option>
-        <option value="Istanbul">Istanbul, Turkey</option>
-        <option value="Lagos">Lagos, Nigeria</option>
-        <option value="Manila">Manila, Philippines</option>
-        <option value="Rio de Janeiro">Rio de Janeiro, Brazil</option>
-        <option value="Guangzhou">Guangzhou, China</option>
-        <option value="Moscow">Moscow, Russia</option>
-        <option value="London">London, United Kingdom</option>
-        <option value="Paris">Paris, France</option>
-        <option value="Bangkok">Bangkok, Thailand</option>
-        <option value="Jakarta">Jakarta, Indonesia</option>
-        <option value="Lima">Lima, Peru</option>
-        <option value="Seoul">Seoul, South Korea</option>
-        <option value="Nairobi">Nairobi, Kenya</option>
-        <option value="Berlin">Berlin, Germany</option>
-        <option value="Madrid">Madrid, Spain</option>
-        <option value="Toronto">Toronto, Canada</option>
-        <option value="Sydney">Sydney, Australia</option>
+    <div class="controls">
+      <label for="city-select" class="sr-only">Select a city</label>
+      <select id="city-select" class="city-select" aria-label="Select a city">
+        <option value="">-- Select a city --</option>
       </select>
-    </section>
+    </div>
 
-    <section id="weather-display">
-      <h2>Daily Weather</h2>
+    <div id="selected-city-display" class="selected-city-display" hidden>
+      <article class="city-card selected">
+        <div class="city-info">
+          <span class="city-name" id="selected-city-name"></span>
+          <span class="city-country" id="selected-city-country"></span>
+        </div>
+        <div class="city-meta">
+          <span class="city-population" id="selected-city-population"></span>
+          <span class="city-coords" id="selected-city-coords"></span>
+        </div>
+      </article>
+    </div>
 
-      <div id="weather-current">
-        <h3>Current Conditions</h3>
-        <p id="weather-city-name"></p>
-        <p id="weather-temperature"></p>
-        <p id="weather-condition"></p>
-        <p id="weather-feels-like"></p>
-        <p id="weather-last-updated"></p>
-      </div>
+    <div class="controls controls-secondary">
+      <input
+        type="search"
+        id="search"
+        class="search-input"
+        placeholder="Search by city or country…"
+        aria-label="Search cities"
+      >
+      <select id="sort" class="sort-select" aria-label="Sort cities">
+        <option value="name">Sort by name</option>
+        <option value="country">Sort by country</option>
+        <option value="population">Sort by population</option>
+      </select>
+    </div>
 
-      <div id="weather-details">
-        <h3>Details</h3>
-        <dl>
-          <dt>Humidity</dt>
-          <dd id="weather-humidity"></dd>
+    <p id="city-count" class="city-count"></p>
+    <div id="city-list" class="city-list"></div>
+  </div>
 
-          <dt>Wind Speed</dt>
-          <dd id="weather-wind"></dd>
-
-          <dt>Pressure</dt>
-          <dd id="weather-pressure"></dd>
-        </dl>
-      </div>
-
-      <div id="weather-forecast">
-        <h3>5-Day Forecast</h3>
-        <ol id="forecast-list">
-        </ol>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <p>Weather data powered by <a href="https://wttr.in">wttr.in</a></p>
-  </footer>
+  <script src="app.js"></script>
 </body>
 </html>

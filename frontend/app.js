@@ -4,15 +4,22 @@ const cityList = document.getElementById("city-list");
 const searchInput = document.getElementById("search");
 const sortSelect = document.getElementById("sort");
 const cityCount = document.getElementById("city-count");
-const citySelect = document.getElementById("city-select");
-const selectedCityDisplay = document.getElementById("selected-city-display");
-const selectedCityName = document.getElementById("selected-city-name");
-const selectedCityCountry = document.getElementById("selected-city-country");
-const selectedCityPopulation = document.getElementById("selected-city-population");
-const selectedCityCoords = document.getElementById("selected-city-coords");
+const weatherPanel = document.getElementById("weather-panel");
+
+const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
+const CURRENT_PARAMS = "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code";
+
+const WMO_DESCRIPTIONS = {
+  0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+  45: "Fog", 48: "Depositing rime fog",
+  51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+  61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+  71: "Slight snowfall", 73: "Moderate snowfall", 75: "Heavy snowfall",
+  80: "Slight rain showers", 81: "Moderate rain showers", 82: "Violent rain showers",
+  95: "Thunderstorm", 96: "Thunderstorm with slight hail", 99: "Thunderstorm with heavy hail",
+};
 
 let cities = [];
-let selectedCity = null;
 
 function formatPopulation(n) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -26,34 +33,73 @@ function formatCoord(lat, lon) {
   return Math.abs(lat).toFixed(2) + "°" + latDir + ", " + Math.abs(lon).toFixed(2) + "°" + lonDir;
 }
 
-function populateDropdown() {
-  citySelect.innerHTML = '<option value="">-- Select a city --</option>';
-  const sorted = [...cities].sort((a, b) => a.name.localeCompare(b.name));
-  for (const city of sorted) {
-    const option = document.createElement("option");
-    option.value = city.name;
-    option.textContent = city.name + ", " + city.country;
-    citySelect.appendChild(option);
-  }
+async function fetchWeather(city) {
+  const url = new URL(OPEN_METEO_URL);
+  url.searchParams.set("latitude", city.lat);
+  url.searchParams.set("longitude", city.lon);
+  url.searchParams.set("current", CURRENT_PARAMS);
+
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error("Weather API error: " + resp.status);
+  const data = await resp.json();
+
+  console.log("Weather API response for " + city.name + ":", data);
+
+  const current = data.current;
+  if (!current) throw new Error("No current weather data in response");
+
+  return {
+    temperature: current.temperature_2m,
+    humidity: current.relative_humidity_2m,
+    windSpeed: current.wind_speed_10m,
+    weatherCode: current.weather_code,
+    description: WMO_DESCRIPTIONS[current.weather_code] || "Unknown (" + current.weather_code + ")",
+  };
 }
 
-function showSelectedCity() {
-  if (!selectedCity) {
-    selectedCityDisplay.hidden = true;
-    return;
-  }
-  selectedCityDisplay.hidden = false;
-  selectedCityName.textContent = selectedCity.name;
-  selectedCityCountry.textContent = selectedCity.country;
-  selectedCityPopulation.textContent = "Pop. " + formatPopulation(selectedCity.population);
-  selectedCityCoords.textContent = formatCoord(selectedCity.lat, selectedCity.lon);
+function showWeatherPanel(city, weather) {
+  weatherPanel.innerHTML = `
+    <div class="weather-header">
+      <span class="weather-city">${city.name}, ${city.country}</span>
+      <button id="close-weather" class="close-btn" aria-label="Close">&times;</button>
+    </div>
+    <div class="weather-details">
+      <div class="weather-temp">${weather.temperature}°C</div>
+      <div class="weather-desc">${weather.description}</div>
+      <div class="weather-stats">
+        <span>Humidity: ${weather.humidity}%</span>
+        <span>Wind: ${weather.windSpeed} km/h</span>
+      </div>
+    </div>`;
+  weatherPanel.hidden = false;
+  document.getElementById("close-weather").addEventListener("click", () => {
+    weatherPanel.hidden = true;
+  });
 }
 
-function onCitySelect() {
-  const name = citySelect.value;
-  selectedCity = cities.find((c) => c.name === name) || null;
-  showSelectedCity();
-  renderCities(getFilteredAndSorted());
+function showWeatherError(city, err) {
+  weatherPanel.innerHTML = `
+    <div class="weather-header">
+      <span class="weather-city">${city.name}</span>
+      <button id="close-weather" class="close-btn" aria-label="Close">&times;</button>
+    </div>
+    <div class="weather-error">Could not load weather data. ${err.message}</div>`;
+  weatherPanel.hidden = false;
+  document.getElementById("close-weather").addEventListener("click", () => {
+    weatherPanel.hidden = true;
+  });
+}
+
+async function handleCityClick(city) {
+  weatherPanel.innerHTML = '<div class="weather-loading">Loading weather…</div>';
+  weatherPanel.hidden = false;
+  try {
+    const weather = await fetchWeather(city);
+    showWeatherPanel(city, weather);
+  } catch (err) {
+    console.error("Failed to fetch weather for " + city.name + ":", err);
+    showWeatherError(city, err);
+  }
 }
 
 function renderCities(list) {
@@ -66,8 +112,8 @@ function renderCities(list) {
 
   cityList.innerHTML = list
     .map(
-      (c) => `
-    <article class="city-card${selectedCity && selectedCity.name === c.name ? " selected" : ""}" data-city="${c.name}">
+      (c, i) => `
+    <article class="city-card" data-index="${i}" role="button" tabindex="0">
       <div class="city-info">
         <span class="city-name">${c.name}</span>
         <span class="city-country">${c.country}</span>
@@ -80,13 +126,14 @@ function renderCities(list) {
     )
     .join("");
 
-  cityList.querySelectorAll(".city-card[data-city]").forEach((card) => {
-    card.addEventListener("click", () => {
-      const name = card.dataset.city;
-      citySelect.value = name;
-      selectedCity = cities.find((c) => c.name === name) || null;
-      showSelectedCity();
-      renderCities(getFilteredAndSorted());
+  cityList.querySelectorAll(".city-card").forEach((card) => {
+    const city = list[Number(card.dataset.index)];
+    card.addEventListener("click", () => handleCityClick(city));
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleCityClick(city);
+      }
     });
   });
 }
@@ -129,7 +176,6 @@ async function init() {
     const resp = await fetch("cities.json");
     if (!resp.ok) throw new Error("Failed to load cities.json: " + resp.status);
     cities = await resp.json();
-    populateDropdown();
     update();
   } catch (err) {
     cityList.innerHTML =
@@ -138,7 +184,6 @@ async function init() {
   }
 }
 
-citySelect.addEventListener("change", onCitySelect);
 searchInput.addEventListener("input", update);
 sortSelect.addEventListener("change", update);
 

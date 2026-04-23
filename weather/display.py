@@ -14,6 +14,7 @@ from rich.text import Text
 
 from weather.api import fetch_weather
 from weather.cities import find_city, get_cities
+from weather.errors import CityNotFoundError, WeatherDataUnavailableError, WeatherError
 from weather.models import City, WeatherCondition, WeatherData
 
 CONDITION_LABELS: dict[WeatherCondition, str] = {
@@ -28,6 +29,17 @@ CONDITION_LABELS: dict[WeatherCondition, str] = {
 }
 
 
+def format_weather_error(error: WeatherError) -> str:
+    if isinstance(error, CityNotFoundError):
+        return f"Error: City '{error.city}' was not found. Please check the city name and try again."
+    if isinstance(error, WeatherDataUnavailableError):
+        return (
+            f"Error: Weather data is currently unavailable for '{error.city}'. "
+            "Please try again later or select a different city."
+        )
+    return f"Error: An unexpected weather error occurred: {error}"
+
+
 class WeatherDisplay:
     """Renders weather information to the terminal."""
 
@@ -35,7 +47,6 @@ class WeatherDisplay:
         self.console = console or Console()
 
     def build_weather_panel(self, weather: WeatherData) -> Panel:
-        """Build a rich Panel showing weather details for one city."""
         condition_label = CONDITION_LABELS.get(weather.condition, str(weather.condition.value))
 
         table = Table(show_header=False, box=None, padding=(0, 1))
@@ -62,12 +73,10 @@ class WeatherDisplay:
         )
 
     def show(self, weather: WeatherData) -> None:
-        """Render a single city's weather to the console."""
         self.console.print()
         self.console.print(self.build_weather_panel(weather))
 
     def show_multiple(self, weather_list: list[WeatherData]) -> None:
-        """Render weather panels for multiple cities side by side."""
         if not weather_list:
             self.console.print("[dim]No weather data to display.[/]")
             return
@@ -76,7 +85,6 @@ class WeatherDisplay:
         self.console.print(Columns(panels, equal=True, expand=True))
 
     def show_city_list(self, cities: list[City], header: str = "Available Cities") -> None:
-        """Display a numbered list of cities."""
         table = Table(title=header, show_lines=False)
         table.add_column("#", style="dim", width=4)
         table.add_column("City", style="bold")
@@ -95,10 +103,6 @@ class WeatherDisplay:
         self.console.print(table)
 
     def prompt_city_selection(self, cities: list[City]) -> City | None:
-        """Prompt the user to select a city by number or name.
-
-        Returns None if the input doesn't match any city.
-        """
         self.show_city_list(cities)
         self.console.print()
         choice = self.console.input("[bold]Select a city[/] (number or name): ").strip()
@@ -112,7 +116,6 @@ class WeatherDisplay:
         return find_city(choice)
 
     def run_interactive(self) -> None:
-        """Run an interactive loop: select a city, view weather, repeat."""
         cities = get_cities()
         self.console.print(
             Panel(
@@ -146,11 +149,13 @@ class WeatherDisplay:
                 self.console.print(f"[red]Unknown city:[/] {choice!r}. Try again.")
                 continue
 
-            weather = fetch_weather(city)
-            self.show(weather)
+            try:
+                weather = fetch_weather(city)
+                self.show(weather)
+            except WeatherError as exc:
+                self.console.print(f"[red]{format_weather_error(exc)}[/]")
 
     def show_summary(self) -> None:
-        """Fetch and display weather for all cities at once."""
         cities = get_cities()
         weather_list = [fetch_weather(c) for c in cities]
         self.console.print(

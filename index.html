@@ -460,6 +460,8 @@
   @media (max-width: 400px) {
     .detail-grid { grid-template-columns: 1fr 1fr; }
     .extra-grid { grid-template-columns: 1fr 1fr; }
+    .detail-grid .detail-card:last-child,
+    .extra-grid .detail-card:last-child { grid-column: span 2; }
     .forecast-row { grid-template-columns: 1fr; }
   }
 </style>
@@ -582,12 +584,14 @@
 
   function displayTemp(celsius) {
     var c = parseFloat(celsius);
+    if (isNaN(c)) return "N/A";
     if (useFahrenheit) return toF(c) + "°F";
     return Math.round(c) + "°C";
   }
 
   function tempNumeric(celsius) {
     var c = parseFloat(celsius);
+    if (isNaN(c)) return "–";
     return useFahrenheit ? toF(c) : Math.round(c);
   }
 
@@ -647,13 +651,30 @@
   /* ─── API ────────────────────────────────────────────────────── */
   async function getWeatherData(city) {
     var url = "https://wttr.in/" + encodeURIComponent(city.trim()) + "?format=j1";
-    var response = await fetch(url);
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function () { controller.abort(); }, 10000);
+    var response;
+    try {
+      response = await fetch(url, { signal: controller.signal });
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      if (fetchErr.name === "AbortError") {
+        throw new Error("Request timed out. Please check your connection and try again.");
+      }
+      throw new Error("Network error. Please check your internet connection and try again.");
+    }
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error("City not found or server error (HTTP " + response.status + ").");
     }
 
-    var data = await response.json();
+    var data;
+    try {
+      data = await response.json();
+    } catch (e) {
+      throw new Error("Unexpected response from the weather service. Please try again.");
+    }
 
     // wttr.in returns data for (0,0) with empty areaName when city is unknown
     var areaName = (
@@ -685,7 +706,11 @@
     var icon = getWeatherIcon(code);
     var desc = (cc.weatherDesc && cc.weatherDesc[0] && cc.weatherDesc[0].value) || "N/A";
     var uvIndex = cc.uvIndex || "N/A";
-    var visibility = cc.visibility || "N/A";
+    var visKm = cc.visibility;
+    var visMi = cc.visibilitymiles;
+    var visDisplay = useFahrenheit
+      ? (visMi ? escapeHtml(String(visMi)) + " mi" : "N/A")
+      : (visKm ? escapeHtml(String(visKm)) + " km" : "N/A");
     var windDir = cc.winddir16Point || "";
     var windKph = cc.windspeedKmph || "0";
     var windMph = cc.windspeedMiles || "0";
@@ -748,7 +773,7 @@
       '<div class="detail-grid" role="region" aria-label="Weather details">' +
         '<div class="detail-card">' +
           '<div class="detail-icon" aria-hidden="true">💧</div>' +
-          '<div class="detail-value">' + cc.humidity + '%</div>' +
+          '<div class="detail-value">' + escapeHtml(String(cc.humidity || "N/A")) + '%</div>' +
           '<div class="detail-label">Humidity</div>' +
         '</div>' +
         '<div class="detail-card">' +
@@ -758,7 +783,7 @@
         '</div>' +
         '<div class="detail-card">' +
           '<div class="detail-icon" aria-hidden="true">📊</div>' +
-          '<div class="detail-value">' + cc.pressure + ' hPa</div>' +
+          '<div class="detail-value">' + escapeHtml(String(cc.pressure || "N/A")) + ' hPa</div>' +
           '<div class="detail-label">Pressure</div>' +
         '</div>' +
       '</div>' +
@@ -766,12 +791,12 @@
       '<div class="extra-grid" role="region" aria-label="Additional details">' +
         '<div class="detail-card">' +
           '<div class="detail-icon" aria-hidden="true">☀️</div>' +
-          '<div class="detail-value">' + uvIndex + '</div>' +
+          '<div class="detail-value">' + escapeHtml(String(uvIndex)) + '</div>' +
           '<div class="detail-label">UV Index</div>' +
         '</div>' +
         '<div class="detail-card">' +
           '<div class="detail-icon" aria-hidden="true">👁️</div>' +
-          '<div class="detail-value">' + visibility + ' km</div>' +
+          '<div class="detail-value">' + visDisplay + '</div>' +
           '<div class="detail-label">Visibility</div>' +
         '</div>' +
         '<div class="detail-card">' +
@@ -853,6 +878,7 @@
   });
 
   document.getElementById("btn-c").addEventListener("click", function () {
+    try { localStorage.setItem("weather_unit", "C"); } catch (e) { /* ignore */ }
     if (useFahrenheit) {
       useFahrenheit = false;
       document.getElementById("btn-c").classList.add("active");
@@ -864,6 +890,7 @@
   });
 
   document.getElementById("btn-f").addEventListener("click", function () {
+    try { localStorage.setItem("weather_unit", "F"); } catch (e) { /* ignore */ }
     if (!useFahrenheit) {
       useFahrenheit = true;
       document.getElementById("btn-f").classList.add("active");
@@ -892,14 +919,6 @@
       document.getElementById("btn-c").setAttribute("aria-checked", "false");
     }
   } catch (e) { /* ignore */ }
-
-  // Persist unit preference on toggle
-  document.getElementById("btn-c").addEventListener("click", function () {
-    try { localStorage.setItem("weather_unit", "C"); } catch (e) { /* ignore */ }
-  });
-  document.getElementById("btn-f").addEventListener("click", function () {
-    try { localStorage.setItem("weather_unit", "F"); } catch (e) { /* ignore */ }
-  });
 
 })();
 </script>

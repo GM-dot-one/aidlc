@@ -33,11 +33,13 @@ class ClaudeCodeAgent:
         self,
         *,
         bin_path: str = "claude",
+        model: str = "claude-sonnet-4-6",
         permission_mode: str = "bypassPermissions",
         max_turns: int = 40,
         timeout_s: int = 1800,
     ) -> None:
         self.bin_path = bin_path
+        self.model = model
         self.permission_mode = permission_mode
         self.max_turns = max_turns
         self.timeout_s = timeout_s
@@ -50,6 +52,8 @@ class ClaudeCodeAgent:
             self.bin_path,
             "-p",
             prompt,
+            "--model",
+            self.model,
             "--permission-mode",
             self.permission_mode,
             "--output-format",

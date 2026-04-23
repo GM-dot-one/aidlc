@@ -66,6 +66,7 @@ def _claude_agent() -> ClaudeCodeAgent:
     s = get_settings()
     return ClaudeCodeAgent(
         bin_path=s.claude_code_bin,
+        model=s.claude_code_model,
         permission_mode=s.claude_code_permission_mode,
         max_turns=s.claude_code_max_turns,
         timeout_s=s.claude_code_timeout_s,

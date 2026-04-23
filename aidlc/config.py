@@ -80,6 +80,7 @@ class Settings(BaseSettings):
 
     # --- Claude Code (local code-generation agent) ---------------------------
     # Path to the `claude` CLI. Override if it's not on PATH or you use npx.
+    claude_code_model: str = Field(default="claude-sonnet-4-6")
     claude_code_bin: str = Field(default="claude")
     # Permission mode for headless runs: default | acceptEdits | bypassPermissions | plan
     # bypassPermissions lets Claude run tests and bash without prompting.

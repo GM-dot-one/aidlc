@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IPL 2024 Schedule</title>
+<style>
+  :root {
+    --bg-primary: #f0f4f8;
+    --bg-card: #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: #fff;
+    padding: 24px 16px;
+    text-align: center;
+  }
+
+  header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  header p {
+    margin-top: 4px;
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+  }
+
+  @media (min-width: 600px) {
+    .team-grid {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+  }
+
+  .team-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .team-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .team-card:focus-visible {
+    outline: 3px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  .team-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .team-card-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+
+  .back-link:hover {
+    color: var(--text-primary);
+  }
+
+  .team-header {
+    padding: 20px 24px;
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    color: #fff;
+  }
+
+  .team-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .section-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 24px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .match-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .match-card {
+    background: var(--bg-card);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: start;
+  }
+
+  .match-opponent {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .match-meta {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .match-result {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .match-result.won { color: #16a34a; }
+  .match-result.lost { color: #dc2626; }
+  .match-result.nr { color: #d97706; }
+
+  .match-time {
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: right;
+    color: var(--text-secondary);
+  }
+
+  .empty-message {
+    padding: 20px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+
+  #view-home, #view-team { display: none; }
+  #view-home.active, #view-team.active { display: block; }
+
+  @media (max-width: 400px) {
+    .team-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .match-card {
+      grid-template-columns: 1fr;
+    }
+    .match-result, .match-time {
+      text-align: left;
+    }
+    header h1 { font-size: 1.35rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IPL 2024 Schedule</h1>
+  <p>Indian Premier League &middot; Season 17</p>
+</header>
+
+<main>
+  <div id="view-home">
+    <div class="team-grid" id="team-grid"></div>
+  </div>
+  <div id="view-team">
+    <a href="#" class="back-link" aria-label="Back to all teams">&larr; All Teams</a>
+    <div id="team-detail"></div>
+  </div>
+</main>
+
+<script>
+const APP_DATA = { teams: [
+  {
+    id: "mi", name: "Mumbai Indians", shortName: "MI",
+    primaryColor: "#004BA0", secondaryColor: "#D4A843",
+    matches: [
+      { opponent: "Gujarat Titans", date: "2024-03-24", time: "15:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Won by 6 wickets" },
+      { opponent: "Rajasthan Royals", date: "2024-03-29", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Lost by 12 runs" },
+      { opponent: "Delhi Capitals", date: "2024-04-01", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Won by 29 runs" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-04-08", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Lost by 31 runs" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-04-12", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Won by 7 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-04-17", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Lost by 24 runs" },
+      { opponent: "Chennai Super Kings", date: "2024-04-21", time: "15:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 20 runs" },
+      { opponent: "Punjab Kings", date: "2024-04-27", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Won by 9 wickets" },
+      { opponent: "Lucknow Super Giants", date: "2024-04-30", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Lost by 18 runs" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-05-03", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Lost by 3 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-05-06", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Lost by 18 runs" },
+      { opponent: "Rajasthan Royals", date: "2024-05-11", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Won by 5 wickets" },
+      { opponent: "Lucknow Super Giants", date: "2024-05-17", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Won by 6 wickets" },
+      { opponent: "Gujarat Titans", date: "2024-05-19", time: "15:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 62 runs" }
+    ]
+  },
+  {
+    id: "csk", name: "Chennai Super Kings", shortName: "CSK",
+    primaryColor: "#FCCA06", secondaryColor: "#0D2C6B",
+    matches: [
+      { opponent: "Royal Challengers Bengaluru", date: "2024-03-22", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 6 wickets" },
+      { opponent: "Gujarat Titans", date: "2024-03-26", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 7 wickets" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-03-31", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 6 wickets" },
+      { opponent: "Delhi Capitals", date: "2024-04-05", time: "19:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Won by 27 runs" },
+      { opponent: "Kolkata Knight Riders", date: "2024-04-10", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 7 runs" },
+      { opponent: "Punjab Kings", date: "2024-04-14", time: "15:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Won by 28 runs" },
+      { opponent: "Mumbai Indians", date: "2024-04-21", time: "15:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 20 runs" },
+      { opponent: "Rajasthan Royals", date: "2024-04-26", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Lost by 7 wickets" },
+      { opponent: "Lucknow Super Giants", date: "2024-04-30", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 12 runs" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-05-04", time: "19:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Won by 27 runs" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-05-10", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Lost by 10 wickets" },
+      { opponent: "Rajasthan Royals", date: "2024-05-12", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 5 wickets" },
+      { opponent: "Gujarat Titans", date: "2024-05-17", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 35 runs" },
+      { opponent: "Delhi Capitals", date: "2024-05-19", time: "15:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 27 runs" }
+    ]
+  },
+  {
+    id: "rcb", name: "Royal Challengers Bengaluru", shortName: "RCB",
+    primaryColor: "#D5152C", secondaryColor: "#000000",
+    matches: [
+      { opponent: "Chennai Super Kings", date: "2024-03-22", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 6 wickets" },
+      { opponent: "Punjab Kings", date: "2024-03-25", time: "19:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Won by 4 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-03-29", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Lost by 1 run" },
+      { opponent: "Rajasthan Royals", date: "2024-04-06", time: "19:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Lost by 6 wickets" },
+      { opponent: "Lucknow Super Giants", date: "2024-04-09", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Lost by 28 runs" },
+      { opponent: "Mumbai Indians", date: "2024-04-12", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Lost by 7 wickets" },
+      { opponent: "Gujarat Titans", date: "2024-04-16", time: "19:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Won by 4 wickets" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-04-20", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Lost by 25 runs" },
+      { opponent: "Delhi Capitals", date: "2024-04-28", time: "15:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Won by 47 runs" },
+      { opponent: "Chennai Super Kings", date: "2024-05-04", time: "19:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Lost by 27 runs" },
+      { opponent: "Gujarat Titans", date: "2024-05-08", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 9 wickets" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-05-11", time: "15:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Won by 35 runs" },
+      { opponent: "Punjab Kings", date: "2024-05-14", time: "19:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Won by 60 runs" },
+      { opponent: "Delhi Capitals", date: "2024-05-18", time: "15:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Won by 47 runs" },
+      { opponent: "Rajasthan Royals", date: "2024-05-22", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 4 wickets" },
+      { opponent: "Rajasthan Royals", date: "2024-05-24", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 4 wickets" }
+    ]
+  },
+  {
+    id: "kkr", name: "Kolkata Knight Riders", shortName: "KKR",
+    primaryColor: "#3A225D", secondaryColor: "#F5C518",
+    matches: [
+      { opponent: "Sunrisers Hyderabad", date: "2024-03-23", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Won by 4 runs" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-03-29", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Won by 1 run" },
+      { opponent: "Lucknow Super Giants", date: "2024-04-02", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Won by 98 runs" },
+      { opponent: "Delhi Capitals", date: "2024-04-07", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Won by 7 wickets" },
+      { opponent: "Chennai Super Kings", date: "2024-04-10", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 7 runs" },
+      { opponent: "Rajasthan Royals", date: "2024-04-16", time: "15:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Won by 2 wickets" },
+      { opponent: "Mumbai Indians", date: "2024-04-17", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Won by 24 runs" },
+      { opponent: "Gujarat Titans", date: "2024-04-22", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 8 wickets" },
+      { opponent: "Punjab Kings", date: "2024-04-26", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Won by 7 wickets" },
+      { opponent: "Delhi Capitals", date: "2024-05-03", time: "19:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Lost by 4 wickets" },
+      { opponent: "Mumbai Indians", date: "2024-05-06", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Won by 18 runs" },
+      { opponent: "Lucknow Super Giants", date: "2024-05-11", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Won by 98 runs" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-05-14", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Won by 8 wickets" },
+      { opponent: "Rajasthan Royals", date: "2024-05-19", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Lost by 2 wickets" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-05-22", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 8 wickets" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-05-26", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 8 wickets" }
+    ]
+  },
+  {
+    id: "srh", name: "Sunrisers Hyderabad", shortName: "SRH",
+    primaryColor: "#FF822A", secondaryColor: "#000000",
+    matches: [
+      { opponent: "Kolkata Knight Riders", date: "2024-03-23", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Lost by 4 runs" },
+      { opponent: "Lucknow Super Giants", date: "2024-03-27", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Won by 10 wickets" },
+      { opponent: "Chennai Super Kings", date: "2024-03-31", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 6 wickets" },
+      { opponent: "Rajasthan Royals", date: "2024-04-04", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Lost by 72 runs" },
+      { opponent: "Mumbai Indians", date: "2024-04-08", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Won by 31 runs" },
+      { opponent: "Gujarat Titans", date: "2024-04-13", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Won by 7 wickets" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-04-20", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Won by 25 runs" },
+      { opponent: "Punjab Kings", date: "2024-04-25", time: "19:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Won by 4 wickets" },
+      { opponent: "Delhi Capitals", date: "2024-04-28", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Won by 67 runs" },
+      { opponent: "Mumbai Indians", date: "2024-05-03", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Won by 3 wickets" },
+      { opponent: "Punjab Kings", date: "2024-05-05", time: "15:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Won by 4 wickets" },
+      { opponent: "Chennai Super Kings", date: "2024-05-10", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Won by 10 wickets" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-05-11", time: "15:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Lost by 35 runs" },
+      { opponent: "Kolkata Knight Riders", date: "2024-05-14", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Lost by 8 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-05-22", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 8 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-05-26", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 8 wickets" }
+    ]
+  },
+  {
+    id: "dc", name: "Delhi Capitals", shortName: "DC",
+    primaryColor: "#004C93", secondaryColor: "#EF1C25",
+    matches: [
+      { opponent: "Punjab Kings", date: "2024-03-23", time: "15:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Won by 4 wickets" },
+      { opponent: "Rajasthan Royals", date: "2024-03-28", time: "19:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Lost by 12 runs" },
+      { opponent: "Mumbai Indians", date: "2024-04-01", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Lost by 29 runs" },
+      { opponent: "Chennai Super Kings", date: "2024-04-05", time: "19:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Lost by 27 runs" },
+      { opponent: "Kolkata Knight Riders", date: "2024-04-07", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Lost by 7 wickets" },
+      { opponent: "Lucknow Super Giants", date: "2024-04-14", time: "19:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Won by 19 runs" },
+      { opponent: "Gujarat Titans", date: "2024-04-18", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 4 runs" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-04-28", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Lost by 67 runs" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-04-28", time: "15:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Lost by 47 runs" },
+      { opponent: "Lucknow Super Giants", date: "2024-05-01", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Lost by 6 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-05-03", time: "19:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Won by 4 wickets" },
+      { opponent: "Rajasthan Royals", date: "2024-05-07", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Lost by 20 runs" },
+      { opponent: "Punjab Kings", date: "2024-05-12", time: "15:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Lost by 5 runs" },
+      { opponent: "Chennai Super Kings", date: "2024-05-19", time: "15:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 27 runs" }
+    ]
+  },
+  {
+    id: "pbks", name: "Punjab Kings", shortName: "PBKS",
+    primaryColor: "#ED1B24", secondaryColor: "#A7A9AC",
+    matches: [
+      { opponent: "Delhi Capitals", date: "2024-03-23", time: "15:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Lost by 4 wickets" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-03-25", time: "19:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Lost by 4 wickets" },
+      { opponent: "Gujarat Titans", date: "2024-04-03", time: "19:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Won by 3 runs" },
+      { opponent: "Lucknow Super Giants", date: "2024-04-08", time: "15:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Won by 21 runs" },
+      { opponent: "Chennai Super Kings", date: "2024-04-14", time: "15:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Lost by 28 runs" },
+      { opponent: "Rajasthan Royals", date: "2024-04-19", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Lost by 3 wickets" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-04-25", time: "19:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Lost by 4 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-04-26", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Lost by 7 wickets" },
+      { opponent: "Mumbai Indians", date: "2024-04-27", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Lost by 9 wickets" },
+      { opponent: "Gujarat Titans", date: "2024-05-02", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 3 runs" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-05-05", time: "15:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Lost by 4 wickets" },
+      { opponent: "Delhi Capitals", date: "2024-05-12", time: "15:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Won by 5 runs" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-05-14", time: "19:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Lost by 60 runs" },
+      { opponent: "Rajasthan Royals", date: "2024-05-19", time: "19:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Lost by 6 wickets" }
+    ]
+  },
+  {
+    id: "rr", name: "Rajasthan Royals", shortName: "RR",
+    primaryColor: "#EA1A85", secondaryColor: "#254AA5",
+    matches: [
+      { opponent: "Delhi Capitals", date: "2024-03-28", time: "19:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Won by 12 runs" },
+      { opponent: "Mumbai Indians", date: "2024-03-29", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Won by 12 runs" },
+      { opponent: "Lucknow Super Giants", date: "2024-04-01", time: "15:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Won by 20 runs" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-04-04", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Won by 72 runs" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-04-06", time: "19:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Won by 6 wickets" },
+      { opponent: "Gujarat Titans", date: "2024-04-10", time: "15:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 3 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-04-16", time: "15:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Lost by 2 wickets" },
+      { opponent: "Punjab Kings", date: "2024-04-19", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Won by 3 wickets" },
+      { opponent: "Chennai Super Kings", date: "2024-04-26", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Won by 7 wickets" },
+      { opponent: "Lucknow Super Giants", date: "2024-05-02", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Won by 7 wickets" },
+      { opponent: "Delhi Capitals", date: "2024-05-07", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Won by 20 runs" },
+      { opponent: "Mumbai Indians", date: "2024-05-11", time: "19:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Lost by 5 wickets" },
+      { opponent: "Chennai Super Kings", date: "2024-05-12", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 5 wickets" },
+      { opponent: "Punjab Kings", date: "2024-05-19", time: "19:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Won by 6 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-05-19", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Won by 2 wickets" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-05-22", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 4 wickets" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-05-24", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Won by 4 wickets" }
+    ]
+  },
+  {
+    id: "lsg", name: "Lucknow Super Giants", shortName: "LSG",
+    primaryColor: "#ACE5F3", secondaryColor: "#1D3461",
+    matches: [
+      { opponent: "Sunrisers Hyderabad", date: "2024-03-27", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Lost by 10 wickets" },
+      { opponent: "Rajasthan Royals", date: "2024-04-01", time: "15:30", venue: "Sawai Mansingh Stadium, Jaipur", status: "past", result: "Lost by 20 runs" },
+      { opponent: "Kolkata Knight Riders", date: "2024-04-02", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Lost by 98 runs" },
+      { opponent: "Punjab Kings", date: "2024-04-08", time: "15:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Lost by 21 runs" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-04-09", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Won by 28 runs" },
+      { opponent: "Delhi Capitals", date: "2024-04-14", time: "19:30", venue: "Arun Jaitley Stadium, Delhi", status: "past", result: "Lost by 19 runs" },
+      { opponent: "Gujarat Titans", date: "2024-04-19", time: "15:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Won by 33 runs" },
+      { opponent: "Mumbai Indians", date: "2024-04-30", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Won by 18 runs" },
+      { opponent: "Chennai Super Kings", date: "2024-04-30", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 12 runs" },
+      { opponent: "Delhi Capitals", date: "2024-05-01", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Won by 6 wickets" },
+      { opponent: "Rajasthan Royals", date: "2024-05-02", time: "19:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Lost by 7 wickets" },
+      { opponent: "Gujarat Titans", date: "2024-05-07", time: "15:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 4 wickets" },
+      { opponent: "Kolkata Knight Riders", date: "2024-05-11", time: "19:30", venue: "Eden Gardens, Kolkata", status: "past", result: "Lost by 98 runs" },
+      { opponent: "Mumbai Indians", date: "2024-05-17", time: "19:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Lost by 6 wickets" }
+    ]
+  },
+  {
+    id: "gt", name: "Gujarat Titans", shortName: "GT",
+    primaryColor: "#1C1C2B", secondaryColor: "#A0D2F0",
+    matches: [
+      { opponent: "Mumbai Indians", date: "2024-03-24", time: "15:30", venue: "Wankhede Stadium, Mumbai", status: "past", result: "Lost by 6 wickets" },
+      { opponent: "Chennai Super Kings", date: "2024-03-26", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 7 wickets" },
+      { opponent: "Punjab Kings", date: "2024-04-03", time: "19:30", venue: "IS Bindra Stadium, Mohali", status: "past", result: "Lost by 3 runs" },
+      { opponent: "Rajasthan Royals", date: "2024-04-10", time: "15:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 3 wickets" },
+      { opponent: "Sunrisers Hyderabad", date: "2024-04-13", time: "19:30", venue: "Rajiv Gandhi Intl Stadium, Hyderabad", status: "past", result: "Lost by 7 wickets" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-04-16", time: "19:30", venue: "M. Chinnaswamy Stadium, Bengaluru", status: "past", result: "Lost by 4 wickets" },
+      { opponent: "Delhi Capitals", date: "2024-04-18", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 4 runs" },
+      { opponent: "Lucknow Super Giants", date: "2024-04-19", time: "15:30", venue: "Ekana Cricket Stadium, Lucknow", status: "past", result: "Lost by 33 runs" },
+      { opponent: "Kolkata Knight Riders", date: "2024-04-22", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 8 wickets" },
+      { opponent: "Punjab Kings", date: "2024-05-02", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 3 runs" },
+      { opponent: "Lucknow Super Giants", date: "2024-05-07", time: "15:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 4 wickets" },
+      { opponent: "Royal Challengers Bengaluru", date: "2024-05-08", time: "19:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Lost by 9 wickets" },
+      { opponent: "Chennai Super Kings", date: "2024-05-17", time: "19:30", venue: "MA Chidambaram Stadium, Chennai", status: "past", result: "Lost by 35 runs" },
+      { opponent: "Mumbai Indians", date: "2024-05-19", time: "15:30", venue: "Narendra Modi Stadium, Ahmedabad", status: "past", result: "Won by 62 runs" }
+    ]
+  }
+]};
+
+function formatDate(isoDate) {
+  const d = new Date(isoDate + 'T00:00:00');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function renderHome() {
+  document.getElementById('view-home').classList.add('active');
+  document.getElementById('view-team').classList.remove('active');
+  document.title = 'IPL 2024 Schedule';
+
+  const grid = document.getElementById('team-grid');
+  if (grid.children.length > 0) return;
+
+  APP_DATA.teams.forEach(function(team) {
+    const card = document.createElement('a');
+    card.className = 'team-card';
+    card.href = '#team-' + team.id;
+    card.setAttribute('aria-label', team.name);
+
+    const badge = document.createElement('div');
+    badge.className = 'team-badge';
+    badge.style.backgroundColor = team.primaryColor;
+    badge.style.color = team.secondaryColor;
+    badge.textContent = team.shortName;
+
+    const name = document.createElement('div');
+    name.className = 'team-card-name';
+    name.textContent = team.name;
+
+    card.appendChild(badge);
+    card.appendChild(name);
+    grid.appendChild(card);
+  });
+}
+
+function renderTeam(teamId) {
+  var team = null;
+  for (var i = 0; i < APP_DATA.teams.length; i++) {
+    if (APP_DATA.teams[i].id === teamId) { team = APP_DATA.teams[i]; break; }
+  }
+  if (!team) { renderHome(); return; }
+
+  document.getElementById('view-home').classList.remove('active');
+  document.getElementById('view-team').classList.add('active');
+  document.title = team.name + ' | IPL 2024 Schedule';
+
+  var past = [];
+  var upcoming = [];
+  team.matches.forEach(function(m) {
+    if (m.status === 'past') past.push(m);
+    else upcoming.push(m);
+  });
+
+  past.sort(function(a, b) { return b.date.localeCompare(a.date); });
+  upcoming.sort(function(a, b) { return a.date.localeCompare(b.date); });
+
+  var html = '';
+  html += '<div class="team-header" style="background:' + team.primaryColor + ';color:' + team.secondaryColor + '">';
+  html += '<h2>' + team.name + '</h2></div>';
+
+  html += '<h3 class="section-title">Past Matches</h3>';
+  if (past.length === 0) {
+    html += '<div class="empty-message">No matches played yet</div>';
+  } else {
+    html += '<div class="match-list">';
+    past.forEach(function(m) {
+      var resultClass = 'nr';
+      if (m.result && m.result.indexOf('Won') === 0) resultClass = 'won';
+      else if (m.result && m.result.indexOf('Lost') === 0) resultClass = 'lost';
+      html += '<div class="match-card">';
+      html += '<div><div class="match-opponent">vs ' + m.opponent + '</div>';
+      html += '<div class="match-meta">' + formatDate(m.date) + ' &middot; ' + m.venue + '</div></div>';
+      html += '<div class="match-result ' + resultClass + '">' + (m.result || '') + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '<h3 class="section-title">Upcoming Matches</h3>';
+  if (upcoming.length === 0) {
+    html += '<div class="empty-message">No upcoming matches scheduled</div>';
+  } else {
+    html += '<div class="match-list">';
+    upcoming.forEach(function(m) {
+      html += '<div class="match-card">';
+      html += '<div><div class="match-opponent">vs ' + m.opponent + '</div>';
+      html += '<div class="match-meta">' + formatDate(m.date) + ' &middot; ' + m.venue + '</div></div>';
+      html += '<div class="match-time">' + (m.time || '') + ' IST</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('team-detail').innerHTML = html;
+}
+
+function route() {
+  var hash = window.location.hash;
+  if (hash.indexOf('#team-') === 0) {
+    renderTeam(hash.substring(6));
+  } else {
+    renderHome();
+  }
+}
+
+window.addEventListener('DOMContentLoaded', route);
+window.addEventListener('hashchange', route);
+</script>
+</body>
+</html>

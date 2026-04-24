@@ -153,7 +153,7 @@ def get_run_notes(stage: str, work_package_id: int) -> str | None:
             .where(WorkflowRun.stage == stage)
             .where(WorkflowRun.work_package_id == work_package_id)
             .where(WorkflowRun.status == "ok")
-            .order_by(WorkflowRun.created_at.desc())  # type: ignore[union-attr]
+            .order_by(WorkflowRun.created_at.desc())  # type: ignore[union-attr,attr-defined]
         ).first()
     return run.notes if run else None
 

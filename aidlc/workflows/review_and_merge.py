@@ -118,7 +118,7 @@ def run_review_and_merge(
 
     verdict: str = review.get("verdict", "request_changes")
     summary: str = review.get("summary", "")
-    comments: list[dict] = review.get("comments", [])
+    comments: list[dict[str, object]] = review.get("comments", [])
 
     log.info("review.llm_verdict", wp=wp.id, verdict=verdict, comments=len(comments))
 

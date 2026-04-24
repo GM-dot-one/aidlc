@@ -45,7 +45,7 @@ _api_available: bool = True
 
 def set_api_available(available: bool) -> None:
     """Control simulated API availability (for testing)."""
-    global _api_available  # noqa: PLW0603
+    global _api_available
     _api_available = available
 
 

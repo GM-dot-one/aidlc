@@ -70,7 +70,7 @@ def run_task_to_code_local(
     sibling_tasks: str = "",
     shared_context: str = "",
     prior_work_summary: str = "",
-    checkout_override: "git_local.RepoCheckout | None" = None,
+    checkout_override: git_local.RepoCheckout | None = None,
     skip_push_and_pr: bool = False,
 ) -> TaskToCodeLocalResult:
     """Drive a single task work package through local code-gen + PR."""

@@ -78,9 +78,7 @@ def run_review_and_merge(
     pr_number = snapshot.pr_number
     pr = gh.get_pull_request(pr_number)
     if pr.state != "open":
-        raise RuntimeError(
-            f"PR #{pr_number} is {pr.state}, not open — nothing to review"
-        )
+        raise RuntimeError(f"PR #{pr_number} is {pr.state}, not open — nothing to review")
 
     wp = op.get_work_package(work_package_id)
     log.info("review.start", wp=wp.id, subject=wp.subject, pr=pr_number)
@@ -120,7 +118,7 @@ def run_review_and_merge(
 
     verdict: str = review.get("verdict", "request_changes")
     summary: str = review.get("summary", "")
-    comments: list[dict] = review.get("comments", [])
+    comments: list[dict[str, object]] = review.get("comments", [])
 
     log.info("review.llm_verdict", wp=wp.id, verdict=verdict, comments=len(comments))
 

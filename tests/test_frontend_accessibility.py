@@ -65,10 +65,9 @@ class AccessibilityParser(HTMLParser):
 
         if tag == "a":
             self.links.append(attr_dict)
-            if (
-                "skip" in attr_dict.get("class", "").lower()
-                and attr_dict.get("href", "").startswith("#")
-            ):
+            if "skip" in attr_dict.get("class", "").lower() and attr_dict.get(
+                "href", ""
+            ).startswith("#"):
                 self.has_skip_link = True
 
         if tag == "form":
@@ -116,7 +115,7 @@ class TestDocumentStructure:
         assert parsed.has_doctype, "Missing <!DOCTYPE html>"
 
     def test_has_lang_attribute(self, parsed):
-        assert parsed.has_lang, '<html> must have a lang attribute'
+        assert parsed.has_lang, "<html> must have a lang attribute"
 
     def test_has_viewport_meta(self, parsed):
         assert parsed.has_viewport, "Missing viewport meta tag"
@@ -168,7 +167,9 @@ class TestSearchForm:
         search_inputs = [i for i in parsed.inputs if i.get("type") == "search"]
         assert len(search_inputs) >= 1, "Expected a search input"
         inp = search_inputs[0]
-        assert "aria-label" in inp or "id" in inp, "Search input needs aria-label or associated label"
+        assert "aria-label" in inp or "id" in inp, (
+            "Search input needs aria-label or associated label"
+        )
 
     def test_search_input_has_aria_autocomplete(self, parsed):
         search_inputs = [i for i in parsed.inputs if i.get("type") == "search"]
@@ -178,7 +179,9 @@ class TestSearchForm:
     def test_search_input_has_aria_expanded(self, parsed):
         search_inputs = [i for i in parsed.inputs if i.get("type") == "search"]
         assert len(search_inputs) >= 1
-        assert "aria-expanded" in search_inputs[0], "Search input needs aria-expanded for combobox pattern"
+        assert "aria-expanded" in search_inputs[0], (
+            "Search input needs aria-expanded for combobox pattern"
+        )
 
     def test_search_input_has_aria_controls(self, parsed):
         search_inputs = [i for i in parsed.inputs if i.get("type") == "search"]
@@ -201,10 +204,9 @@ class TestUnitToggle:
 
     def test_radio_buttons_have_aria_checked(self, parsed):
         radio_buttons = [
-            b for b in parsed.buttons if any(
-                (t, k, v) for t, k, v in parsed.aria_attrs
-                if k == "aria-checked"
-            )
+            b
+            for b in parsed.buttons
+            if any((t, k, v) for t, k, v in parsed.aria_attrs if k == "aria-checked")
         ]
         assert len(radio_buttons) >= 2, "Radio buttons need aria-checked"
 
@@ -229,7 +231,7 @@ class TestAriaLiveRegions:
 
 class TestExternalLinks:
     def test_external_links_have_noopener(self, parsed):
-        external = [l for l in parsed.links if l.get("target") == "_blank"]
+        external = [link for link in parsed.links if link.get("target") == "_blank"]
         for link in external:
             rel = link.get("rel", "")
             assert "noopener" in rel, f"External link missing rel='noopener': {link.get('href')}"

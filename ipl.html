@@ -65,6 +65,8 @@
     }
 
     .team-card {
+      -webkit-appearance: none;
+      appearance: none;
       border: 2px solid transparent;
       border-radius: 12px;
       padding: 20px 12px;
@@ -77,6 +79,7 @@
       text-align: center;
       background: none;
       font-family: inherit;
+      color: inherit;
     }
 
     .team-card:hover, .team-card:focus-visible {
@@ -151,6 +154,8 @@
     }
 
     .back-btn {
+      -webkit-appearance: none;
+      appearance: none;
       background: none;
       font-family: inherit;
       font-size: 0.88rem;
@@ -428,7 +433,7 @@ function renderTeamListView() {
 // ── Team Detail View ───────────────────────────────────
 function renderTeamDetailView(code) {
   var team = getTeam(code);
-  if (!team) { location.hash = ''; return; }
+  if (!team) { history.replaceState(null, '', location.pathname + location.search); renderTeamListView(); return; }
 
   var today = todayStr();
   var teamMatches = MATCHES.filter(function(m) {

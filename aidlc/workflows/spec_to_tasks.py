@@ -118,7 +118,9 @@ def run_spec_to_tasks(
     elif isinstance(parsed, list):
         tasks = parsed
     else:
-        raise ValueError(f"Expected JSON object with 'tasks' or a JSON array, got {type(parsed).__name__}")
+        raise ValueError(
+            f"Expected JSON object with 'tasks' or a JSON array, got {type(parsed).__name__}"
+        )
 
     if not isinstance(tasks, list):
         raise ValueError(f"Expected tasks to be a list, got {type(tasks).__name__}")

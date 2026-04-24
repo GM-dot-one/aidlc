@@ -198,14 +198,10 @@ class GitHubClient:
         payload: dict[str, object] = {"body": body, "event": event}
         if comments:
             payload["comments"] = comments
-        resp = self._request(
-            "POST", f"/repos/{self._repo}/pulls/{number}/reviews", json=payload
-        )
+        resp = self._request("POST", f"/repos/{self._repo}/pulls/{number}/reviews", json=payload)
         return resp.json()  # type: ignore[no-any-return]
 
-    def merge_pull_request(
-        self, number: int, merge_method: str = "squash"
-    ) -> dict[str, object]:
+    def merge_pull_request(self, number: int, merge_method: str = "squash") -> dict[str, object]:
         """Merge a pull request via the REST API."""
         resp = self._request(
             "PUT",

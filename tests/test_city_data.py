@@ -52,6 +52,7 @@ def test_no_duplicate_ids():
 def test_id_format():
     data = json.loads(CITIES_JSON.read_text())
     import re
+
     for city in data:
         assert re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", city["id"]), (
             f"City ID {city['id']!r} is not a valid lowercase hyphenated slug"

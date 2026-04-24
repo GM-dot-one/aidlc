@@ -229,7 +229,7 @@ class TestAriaLiveRegions:
 
 class TestExternalLinks:
     def test_external_links_have_noopener(self, parsed):
-        external = [l for l in parsed.links if l.get("target") == "_blank"]
+        external = [link for link in parsed.links if link.get("target") == "_blank"]
         for link in external:
             rel = link.get("rel", "")
             assert "noopener" in rel, f"External link missing rel='noopener': {link.get('href')}"

@@ -48,7 +48,7 @@ def show(
         display.show(weather)
     except WeatherError as exc:
         console.print(f"[red]{format_weather_error(exc)}[/]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 @app.command()
